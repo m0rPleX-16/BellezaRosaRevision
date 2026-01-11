@@ -3,7 +3,12 @@
 @section('title', 'Appointments - Belleza Rosa')
 
 @section('content')
-    <div class="space-y-6">
+    <div class="space-y-6"
+         data-appointments-store="{{ route('dashboard.appointments.store') }}"
+         data-opening-time="{{ substr($openingTime, 0, 5) }}"
+         data-closing-time="{{ substr($closingTime, 0, 5) }}"
+         data-max-days-ahead="{{ $maxDaysAhead }}"
+         data-slot-interval="{{ $slotInterval }}">
         <!-- Header -->
         <div class="flex justify-between items-center">
             <h1 class="text-3xl font-bold text-gray-900">Appointments</h1>
@@ -154,9 +159,16 @@
                                 {{ $appointment->status == 'confirmed' ? 'text-green-600' : '' }}
                                 {{ $appointment->status == 'in_progress' ? 'text-yellow-600' : '' }}
                                 {{ $appointment->status == 'completed' ? 'text-gray-600' : '' }}
-                                {{ $appointment->status == 'cancelled' ? 'text-red-600' : '' }}">
+                                {{ $appointment->status == 'cancelled' ? 'text-red-600' : '' }}
+                                {{ $appointment->status == 'failed' ? 'text-red-800' : '' }}
+                                {{ $appointment->status == 'no_show' ? 'text-orange-600' : '' }}">
                                         {{ str_replace('_', ' ', ucfirst($appointment->status)) }}
                                     </span>
+                                    @if($appointment->cancellation_reason)
+                                        <br><span class="text-xs text-gray-500 italic" title="{{ $appointment->cancellation_reason }}">
+                                            Reason: {{ Str::limit($appointment->cancellation_reason, 30) }}
+                                        </span>
+                                    @endif
                                 </td>
 
                                 <!-- Actions Column -->
@@ -165,9 +177,12 @@
 
                                         <!-- Status Update -->
                                         <form action="{{ route('dashboard.appointments.status', $appointment) }}"
-                                            method="POST" class="inline">
+                                            method="POST" class="inline" id="statusForm{{ $appointment->id }}">
                                             @csrf
-                                            <select name="status" onchange="this.form.submit()"
+                                            <select name="status" 
+                                                data-old-value="{{ $appointment->status }}"
+                                                data-appointment-id="{{ $appointment->id }}"
+                                                onchange="confirmStatusChange(this)"
                                                 class="text-xs font-semibold rounded-lg px-3 py-1 bg-blue-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-300">
                                                 <option value="scheduled"
                                                     {{ $appointment->status == 'scheduled' ? 'selected' : '' }}>Scheduled
@@ -184,6 +199,12 @@
                                                 <option value="cancelled"
                                                     {{ $appointment->status == 'cancelled' ? 'selected' : '' }}>Cancelled
                                                 </option>
+                                                <option value="failed"
+                                                    {{ $appointment->status == 'failed' ? 'selected' : '' }}>Failed
+                                                </option>
+                                                <option value="no_show"
+                                                    {{ $appointment->status == 'no_show' ? 'selected' : '' }}>No Show
+                                                </option>
                                             </select>
                                         </form>
 
@@ -193,12 +214,12 @@
                                             <i class="fas fa-edit"></i>
                                         </a>
 
-                                        <!-- Cancel Appointment Button (only if not already cancelled) -->
-                                        @if (!$appointment->isCancelled())
+                                        <!-- Cancel Appointment Button (only if not already cancelled or failed) -->
+                                        @if (!$appointment->isCancelled() && !$appointment->isFailed())
                                             <a href="{{ route('dashboard.appointments.cancel.form', $appointment) }}"
                                                 class="text-red-600 hover:text-red-800 transition"
                                                 title="Cancel Appointment"
-                                                onclick="return confirm('Are you sure you want to cancel this appointment?')">
+                                                onclick="return confirmCancelAppointment(event)">
                                                 <i class="fas fa-times-circle text-lg"></i>
                                             </a>
                                         @endif
@@ -274,8 +295,10 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                                 <option value="">Select Customer</option>
                                 @foreach ($customers ?? [] as $customer)
-                                    <option value="{{ $customer->id }}">{{ $customer->full_name }} -
-                                        {{ $customer->phone }}</option>
+                                    @if(isset($customer) && is_object($customer))
+                                    <option value="{{ $customer->id ?? '' }}">{{ $customer->full_name ?? '' }} -
+                                        {{ $customer->phone ?? '' }}</option>
+                                    @endif
                                 @endforeach
                             </select>
                         </div>
@@ -285,8 +308,10 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                                 <option value="">Select Service</option>
                                 @foreach ($services ?? [] as $service)
-                                    <option value="{{ $service->id }}">{{ $service->name }} -
-                                        ₱{{ number_format($service->price_regular) }}</option>
+                                    @if(isset($service) && is_object($service))
+                                    <option value="{{ $service->id ?? '' }}">{{ $service->name ?? '' }} -
+                                        ₱{{ number_format($service->price_regular ?? 0, 2) }}</option>
+                                    @endif
                                 @endforeach
                             </select>
                         </div>
@@ -334,6 +359,72 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Confirmation for status change
+        async function confirmStatusChange(selectElement) {
+            const newStatus = selectElement.value;
+            const oldStatus = selectElement.dataset.oldValue;
+            const appointmentId = selectElement.dataset.appointmentId;
+            
+            // Get status labels
+            const statusLabels = {
+                'scheduled': 'Scheduled',
+                'confirmed': 'Confirmed',
+                'in_progress': 'In Progress',
+                'completed': 'Completed',
+                'cancelled': 'Cancelled',
+                'failed': 'Failed',
+                'no_show': 'No Show'
+            };
+
+            // Critical status changes require confirmation
+            if (['cancelled', 'failed', 'no_show', 'completed'].includes(newStatus)) {
+                const result = await Swal.fire({
+                    title: 'Confirm Status Change',
+                    html: `Are you sure you want to change this appointment status from <strong>${statusLabels[oldStatus]}</strong> to <strong>${statusLabels[newStatus]}</strong>?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: newStatus === 'completed' ? '#10b981' : '#dc2626',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Yes, change it',
+                    cancelButtonText: 'Cancel'
+                });
+
+                if (!result.isConfirmed) {
+                    // Reset to old value
+                    selectElement.value = oldStatus;
+                    return false;
+                }
+            }
+
+            // Submit the form
+            document.getElementById('statusForm' + appointmentId).submit();
+        }
+
+        // Confirmation for cancel appointment
+        function confirmCancelAppointment(event) {
+            event.preventDefault();
+            const url = event.target.closest('a').href;
+            
+            Swal.fire({
+                title: 'Cancel Appointment?',
+                text: 'You will be redirected to the cancellation form where you must provide a reason.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, cancel it',
+                cancelButtonText: 'No, keep it'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+            
+            return false;
+        }
+    </script>
     <script>
         // Function to validate appointment time
         function validateAppointmentTime(input) {
@@ -343,8 +434,10 @@
             const selectedTime = selectedDateTime.toTimeString().split(' ')[0].substring(0, 5); // HH:mm format
 
             // Parse business hours (passed from PHP)
-            const openingTime = '{{ substr($openingTime, 0, 5) }}'; // e.g., "09:00"
-            const closingTime = '{{ substr($closingTime, 0, 5) }}'; // e.g., "20:00"
+            // Get business hours from data attributes
+            const contentDiv = document.querySelector('.space-y-6');
+            const openingTime = contentDiv ? contentDiv.dataset.openingTime : '09:00';
+            const closingTime = contentDiv ? contentDiv.dataset.closingTime : '20:00';
 
             const errorElement = document.getElementById('timeError');
 
@@ -373,11 +466,12 @@
             const today = now.toISOString().split('T')[0];
             const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:mm
 
-            // Salon settings from PHP
-            const openingTime = '{{ substr($openingTime, 0, 5) }}';
-            const closingTime = '{{ substr($closingTime, 0, 5) }}';
-            const maxDaysAhead = {{ $maxDaysAhead }};
-            const slotInterval = {{ $slotInterval }};
+            // Salon settings from data attributes
+            const contentDiv = document.querySelector('.space-y-6');
+            const openingTime = contentDiv ? contentDiv.dataset.openingTime : '09:00';
+            const closingTime = contentDiv ? contentDiv.dataset.closingTime : '20:00';
+            const maxDaysAhead = parseInt(contentDiv ? contentDiv.dataset.maxDaysAhead : 30);
+            const slotInterval = parseInt(contentDiv ? contentDiv.dataset.slotInterval : 15);
 
             // Calculate max date
             const maxDate = new Date(now);
@@ -436,15 +530,18 @@
 
         // Override form submission to validate time
         document.addEventListener('DOMContentLoaded', function() {
-            const appointmentForm = document.querySelector(
-                'form[action="{{ route('dashboard.appointments.store') }}"]');
+            const contentDiv = document.querySelector('.space-y-6');
+            const appointmentsStoreUrl = contentDiv ? contentDiv.dataset.appointmentsStore : '';
+            const appointmentForm = appointmentsStoreUrl ? document.querySelector(
+                `form[action="${appointmentsStoreUrl}"]`) : null;
             if (appointmentForm) {
                 appointmentForm.addEventListener('submit', function(e) {
                     const dateTimeInput = document.querySelector('.appointment-time');
                     if (dateTimeInput && !validateAppointmentTime(dateTimeInput)) {
                         e.preventDefault();
-                        const openingTime = '{{ substr($openingTime, 0, 5) }}';
-                        const closingTime = '{{ substr($closingTime, 0, 5) }}';
+                        const contentDiv2 = document.querySelector('.space-y-6');
+                        const openingTime = contentDiv2 ? contentDiv2.dataset.openingTime : '09:00';
+                        const closingTime = contentDiv2 ? contentDiv2.dataset.closingTime : '20:00';
                         alert(
                         `Please select a time within business hours: ${openingTime} - ${closingTime}`);
                         dateTimeInput.focus();

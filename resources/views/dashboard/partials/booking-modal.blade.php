@@ -8,7 +8,14 @@
 @endphp
 
 <!-- Booking Modal -->
-<div id="bookingModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 hidden">
+<div id="bookingModal" 
+     class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 hidden"
+     data-opening-time="{{ substr($openingTime, 0, 5) }}"
+     data-closing-time="{{ substr($closingTime, 0, 5) }}"
+     data-max-days-ahead="{{ $maxDaysAhead }}"
+     data-slot-interval="{{ $slotInterval }}"
+     data-availability-url="{{ route('dashboard.appointments.checkAvailability') }}"
+     data-csrf-token="{{ csrf_token() }}">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
         <div class="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6 rounded-t-2xl">
             <div class="flex justify-between items-center">
@@ -27,24 +34,32 @@
                         <select name="customer_id" required class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                             <option value="">Select Customer</option>
                             @foreach($customers ?? [] as $customer)
-                                <option value="{{ $customer->id }}">{{ $customer->full_name }} - {{ $customer->phone }}</option>
+                                @if(isset($customer) && is_object($customer))
+                                <option value="{{ $customer->id ?? '' }}">{{ $customer->full_name ?? '' }} - {{ $customer->phone ?? '' }}</option>
+                                @endif
                             @endforeach
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label class="block text-gray-700 font-semibold mb-2">Staff</label>
-                        <select name="staff_id" required 
-                                onchange="filterServicesByStaff(this)"
+                        <select name="staff_id" id="staffSelect" required 
+                                onchange="filterServicesByStaff(this); checkStaffAvailability();"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                             <option value="">Select Staff</option>
                             @foreach($staff ?? [] as $staffMember)
-                                <option value="{{ $staffMember->id }}" 
-                                        data-specialty="{{ $staffMember->specialty }}">
-                                    {{ $staffMember->user->full_name }} ({{ ucfirst($staffMember->specialty) }})
+                                @if(isset($staffMember) && is_object($staffMember) && isset($staffMember->user) && is_object($staffMember->user))
+                                <option value="{{ $staffMember->id ?? '' }}" 
+                                        data-specialty="{{ $staffMember->specialty ?? 'both' }}">
+                                    {{ $staffMember->user->full_name ?? 'Staff' }} ({{ ucfirst($staffMember->specialty ?? 'both') }})
                                 </option>
+                                @endif
                             @endforeach
                         </select>
+                        <div id="staffAvailabilityStatus" class="mt-2 text-sm hidden">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <span id="availabilityText"></span>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -55,12 +70,14 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                             <option value="">Select Service</option>
                             @foreach($services ?? [] as $service)
-                                <option value="{{ $service->id }}" 
-                                        data-category="{{ $service->category->specialty }}"
-                                        data-duration="{{ $service->duration_minutes }}"
-                                        data-price="{{ $service->price_regular }}">
-                                    {{ $service->name }} - ₱{{ number_format($service->price_regular) }} ({{ $service->duration_minutes }} mins)
+                                @if(isset($service) && is_object($service) && isset($service->category) && is_object($service->category))
+                                <option value="{{ $service->id ?? '' }}" 
+                                        data-category="{{ $service->category->specialty ?? 'both' }}"
+                                        data-duration="{{ $service->duration_minutes ?? 30 }}"
+                                        data-price="{{ $service->price_regular ?? 0 }}">
+                                    {{ $service->name ?? 'Service' }} - ₱{{ number_format($service->price_regular ?? 0, 2) }} ({{ $service->duration_minutes ?? 30 }} mins)
                                 </option>
+                                @endif
                             @endforeach
                         </select>
                         <p class="text-sm text-gray-500 mt-1" id="serviceFilterInfo">
@@ -79,7 +96,7 @@
                             required 
                             id="appointmentDateTime"
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none appointment-time"
-                            onchange="validateAppointmentTime(this)"
+                            onchange="validateAppointmentTime(this); checkStaffAvailability();"
                         >
                         <p class="text-sm text-gray-500 mt-1" id="businessHoursText">
                             Business hours: {{ date('g:i A', strtotime($openingTime)) }} - {{ date('g:i A', strtotime($closingTime)) }}
@@ -103,6 +120,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // Filter services based on selected staff specialty
 function filterServicesByStaff(staffSelect) {
@@ -195,9 +213,10 @@ function validateAppointmentTime(input) {
     const selectedDateTime = new Date(input.value);
     const selectedTime = selectedDateTime.toTimeString().split(' ')[0].substring(0, 5); // HH:mm format
     
-    // Parse business hours
-    const openingTime = '{{ substr($openingTime, 0, 5) }}'; // e.g., "09:00"
-    const closingTime = '{{ substr($closingTime, 0, 5) }}'; // e.g., "20:00"
+    // Parse business hours from data attributes
+    const bookingModal = document.getElementById('bookingModal');
+    const openingTime = bookingModal ? bookingModal.dataset.openingTime : '09:00';
+    const closingTime = bookingModal ? bookingModal.dataset.closingTime : '20:00';
     
     const errorElement = document.getElementById('timeError');
     if (!errorElement) return true;
@@ -230,11 +249,14 @@ function openBookingModal() {
     const today = now.toISOString().split('T')[0];
     const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:mm
     
-    // Salon settings
-    const openingTime = '{{ substr($openingTime, 0, 5) }}';
-    const closingTime = '{{ substr($closingTime, 0, 5) }}';
-    const maxDaysAhead = {{ $maxDaysAhead }};
-    const slotInterval = {{ $slotInterval }};
+    // Salon settings from data attributes
+    const bookingModalEl = document.getElementById('bookingModal');
+    if (!bookingModalEl) return;
+    
+    const openingTime = bookingModalEl.dataset.openingTime || '09:00';
+    const closingTime = bookingModalEl.dataset.closingTime || '20:00';
+    const maxDaysAhead = parseInt(bookingModalEl.dataset.maxDaysAhead || 30);
+    const slotInterval = parseInt(bookingModalEl.dataset.slotInterval || 15);
     
     // Calculate max date
     const maxDate = new Date(now);
@@ -288,6 +310,82 @@ function openBookingModal() {
     }
 }
 
+// Check staff availability
+async function checkStaffAvailability() {
+    const staffSelect = document.getElementById('staffSelect');
+    const dateTimeInput = document.getElementById('appointmentDateTime');
+    const serviceSelect = document.getElementById('serviceSelect');
+    const availabilityStatus = document.getElementById('staffAvailabilityStatus');
+    const availabilityText = document.getElementById('availabilityText');
+    
+    if (!staffSelect || !dateTimeInput || !availabilityStatus || !availabilityText) return;
+    
+    const staffId = staffSelect.value;
+    const dateTime = dateTimeInput.value;
+    const serviceId = serviceSelect.value;
+    
+    // Reset status
+    availabilityStatus.classList.add('hidden');
+    
+    if (!staffId || !dateTime || !serviceId) {
+        return; // Not enough info to check
+    }
+    
+    // Get service duration
+    const selectedService = serviceSelect.options[serviceSelect.selectedIndex];
+    if (!selectedService || !selectedService.value) return;
+    
+    const duration = selectedService.getAttribute('data-duration');
+    if (!duration) return;
+    
+    // Show loading
+    availabilityStatus.classList.remove('hidden', 'text-green-600', 'text-red-600', 'text-yellow-600');
+    availabilityStatus.classList.add('text-blue-600');
+    availabilityText.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Checking availability...';
+    
+    try {
+        const bookingModalEl = document.getElementById('bookingModal');
+        if (!bookingModalEl) return;
+        
+        const availabilityUrl = bookingModalEl.dataset.availabilityUrl;
+        const csrfToken = bookingModalEl.dataset.csrfToken;
+        
+        if (!availabilityUrl || !csrfToken) {
+            throw new Error('Missing configuration');
+        }
+        
+        const response = await fetch(availabilityUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({
+                staff_id: staffId,
+                start_datetime: dateTime,
+                duration_minutes: parseInt(duration)
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.available) {
+            availabilityStatus.classList.remove('text-blue-600', 'text-red-600', 'text-yellow-600');
+            availabilityStatus.classList.add('text-green-600');
+            availabilityText.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Staff is available for this time slot';
+        } else {
+            availabilityStatus.classList.remove('text-blue-600', 'text-green-600', 'text-yellow-600');
+            availabilityStatus.classList.add('text-red-600');
+            availabilityText.innerHTML = '<i class="fas fa-times-circle mr-1"></i> Staff is not available for this time slot. Please choose another time.';
+        }
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        availabilityStatus.classList.remove('text-blue-600', 'text-green-600', 'text-red-600');
+        availabilityStatus.classList.add('text-yellow-600');
+        availabilityText.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i> Could not verify availability. Please proceed with caution.';
+    }
+}
+
 // Form submission validation
 document.addEventListener('DOMContentLoaded', function() {
     const bookingForm = document.getElementById('bookingForm');
@@ -296,10 +394,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const dateTimeInput = document.getElementById('appointmentDateTime');
             if (dateTimeInput && !validateAppointmentTime(dateTimeInput)) {
                 e.preventDefault();
-                const openingTime = '{{ substr($openingTime, 0, 5) }}';
-                const closingTime = '{{ substr($closingTime, 0, 5) }}';
+                const bookingModalEl = document.getElementById('bookingModal');
+                const openingTime = bookingModalEl ? bookingModalEl.dataset.openingTime : '09:00';
+                const closingTime = bookingModalEl ? bookingModalEl.dataset.closingTime : '20:00';
                 alert(`Please select a time within business hours: ${openingTime} - ${closingTime}`);
                 dateTimeInput.focus();
+                return;
+            }
+            
+            // Check availability one more time before submission
+            const availabilityStatus = document.getElementById('staffAvailabilityStatus');
+            if (availabilityStatus && !availabilityStatus.classList.contains('hidden')) {
+                const availabilityText = document.getElementById('availabilityText');
+                if (availabilityText && availabilityText.textContent.includes('not available')) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'Staff Not Available',
+                        text: 'The selected staff member is not available for this time slot. Please choose another time or staff member.',
+                        icon: 'warning',
+                        confirmButtonColor: '#dc2626'
+                    });
+                }
             }
         });
     }

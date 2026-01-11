@@ -12,6 +12,14 @@ use Carbon\Carbon;
 class StaffController extends Controller
 {
     /**
+     * Legacy route - redirect to staff dashboard
+     */
+    public function index()
+    {
+        return redirect()->route('staff.dashboard');
+    }
+
+    /**
      * Show staff dashboard
      */
     public function dashboard()
@@ -189,15 +197,16 @@ class StaffController extends Controller
                 ->update(['status' => 'completed']);
         }
 
+        // TODO: ServiceReport model not yet implemented
         // Create service report
-        ServiceReport::create([
-            'staff_id' => $staff->id,
-            'report_date' => $request->report_date,
-            'completed_services' => $request->completed_services ?? [],
-            'notes' => $request->notes,
-            'materials_used' => $request->materials_used,
-            'submitted_at' => now()
-        ]);
+        // ServiceReport::create([
+        //     'staff_id' => $staff->id,
+        //     'report_date' => $request->report_date,
+        //     'completed_services' => $request->completed_services ?? [],
+        //     'notes' => $request->notes,
+        //     'materials_used' => $request->materials_used,
+        //     'submitted_at' => now()
+        // ]);
 
         return redirect()->route('staff.dashboard')
             ->with('success', 'Service report submitted successfully!');

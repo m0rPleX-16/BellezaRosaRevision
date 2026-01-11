@@ -54,7 +54,7 @@
                 <form action="{{ route('dashboard.services.destroy', $service) }}" method="POST" class="flex-1">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" onclick="return confirm('Are you sure you want to delete this service?')" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition text-sm font-semibold">
+                    <button type="submit" onclick="return confirmServiceDelete(event)" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition text-sm font-semibold">
                         <i class="fas fa-trash mr-1"></i> Delete
                     </button>
                 </form>
@@ -103,13 +103,16 @@
                         <select name="category_id" required class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                             <option value="">Select Category</option>
                             @foreach($categories ?? [] as $category)
-                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @if(isset($category) && is_object($category))
+                                <option value="{{ $category->id ?? '' }}">{{ $category->name ?? '' }}</option>
+                                @endif
                             @endforeach
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="block text-gray-700 font-semibold mb-2">Duration (minutes)</label>
-                        <input type="number" name="duration_minutes" required value="60" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                        <input type="number" name="duration_minutes" required min="30" value="60" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                        <p class="text-xs text-gray-500 mt-1">Minimum duration: 30 minutes</p>
                     </div>
                     <div class="form-group">
                         <label class="block text-gray-700 font-semibold mb-2">Regular Price</label>
@@ -162,6 +165,7 @@ window.onclick = function(event) {
 .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

@@ -3,7 +3,17 @@
 @section('title', 'Dashboard - Belleza Rosa')
 
 @section('content')
-    <div class="space-y-6">
+    <div class="space-y-6" 
+         data-filter-url="{{ route('dashboard.filter') }}"
+         data-csrf-token="{{ csrf_token() }}"
+         data-appointments-index="{{ route('dashboard.appointments.index') }}"
+         data-staff-index="{{ route('dashboard.staff.index') }}"
+         data-reports-financial="{{ route('dashboard.reports.financial') }}"
+         data-customers-data="{{ json_encode($customersWithServices) }}"
+         data-total-services="{{ $totalServices ?? 0 }}"
+         data-popular-service="{{ $popularService ?? '' }}"
+         data-stats-label="{{ $stats_label ?? "Today's" }}"
+         data-total-customers="{{ $total_customers ?? 0 }}">
         <!-- Header with Date Filter -->
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <h1 class="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
@@ -32,15 +42,15 @@
                 </div>
 
                 <!-- Custom Date Range Picker -->
-                <div id="customDateRangePicker" class="hidden gap-2 flex-col sm:flex-row">
-                    <div class="flex gap-2">
+                <div id="customDateRangePicker" class="hidden gap-2 flex-col sm:flex-row w-full sm:w-auto">
+                    <div class="flex gap-2 items-center">
+                        <label class="text-sm text-gray-600 whitespace-nowrap">From:</label>
                         <input type="date" id="dateFrom" value="{{ $dateFrom }}"
                             class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
-                        <span class="flex items-center">to</span>
+                        <label class="text-sm text-gray-600 whitespace-nowrap">To:</label>
                         <input type="date" id="dateTo" value="{{ $dateTo }}"
                             class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                     </div>
-                    <p class="text-xs text-gray-500">Select start and end dates</p>
                 </div>
 
                 <!-- Apply Button -->
@@ -356,11 +366,15 @@
 
                 showLoading();
 
-                fetch('{{ route('dashboard.filter') }}', {
+                const contentDiv1 = document.querySelector('.space-y-6');
+                const filterUrl1 = contentDiv1 ? contentDiv1.dataset.filterUrl : '';
+                const csrfToken1 = contentDiv1 ? contentDiv1.dataset.csrfToken : '';
+                
+                fetch(filterUrl1, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': csrfToken1
                         },
                         body: JSON.stringify({
                             date_range: 'custom_range',
@@ -390,11 +404,15 @@
         function applyDateFilter(filter) {
             showLoading();
 
-            fetch('{{ route('dashboard.filter') }}', {
+            const contentDiv = document.querySelector('.space-y-6');
+            const filterUrl = contentDiv ? contentDiv.dataset.filterUrl : '';
+            const csrfToken = contentDiv ? contentDiv.dataset.csrfToken : '';
+            
+            fetch(filterUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        'X-CSRF-TOKEN': csrfToken
                     },
                     body: JSON.stringify({
                         date_range: filter
@@ -421,11 +439,15 @@
             if (month) {
                 showLoading();
 
-                fetch('{{ route('dashboard.filter') }}', {
+                const contentDiv2 = document.querySelector('.space-y-6');
+                const filterUrl2 = contentDiv2 ? contentDiv2.dataset.filterUrl : '';
+                const csrfToken2 = contentDiv2 ? contentDiv2.dataset.csrfToken : '';
+                
+                fetch(filterUrl2, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': csrfToken2
                         },
                         body: JSON.stringify({
                             date_range: 'custom',
@@ -531,7 +553,8 @@
         function viewAppointments() {
             // Navigate to appointments page with current filter
             const filter = document.getElementById('dateFilter').value;
-            let url = '{{ route('dashboard.appointments.index') }}';
+            const contentDiv = document.querySelector('.space-y-6');
+            let url = contentDiv ? contentDiv.dataset.appointmentsIndex : '';
 
             if (filter !== 'today') {
                 url += `?date_range=${filter}`;
@@ -552,30 +575,44 @@
                 updateCustomerServicesModal(window.currentFilterData);
             } else {
                 // If no filter data, use the initial page data
-                updateCustomerServicesModal({
-                    customer_services: {
-                        customers: @json($customersWithServices),
-                        total_services: {{ $totalServices }},
-                        popular_service: '{{ $popularService }}'
-                    },
-                    label: '{{ $stats_label ?? "Today\'s" }}',
-                    stats: {
-                        customers_count: {{ $total_customers ?? 0 }}
-                    }
-                });
+                const contentDiv = document.querySelector('.space-y-6');
+                if (contentDiv) {
+                    const customersData = contentDiv.dataset.customersData ? JSON.parse(contentDiv.dataset.customersData) : [];
+                    const totalServices = parseInt(contentDiv.dataset.totalServices || 0);
+                    const popularService = contentDiv.dataset.popularService || '';
+                    const statsLabel = contentDiv.dataset.statsLabel || "Today's";
+                    const totalCustomers = parseInt(contentDiv.dataset.totalCustomers || 0);
+                    
+                    updateCustomerServicesModal({
+                        customer_services: {
+                            customers: customersData,
+                            total_services: totalServices,
+                            popular_service: popularService
+                        },
+                        label: statsLabel,
+                        stats: {
+                            customers_count: totalCustomers
+                        }
+                    });
+                }
             }
             document.getElementById('customerServicesModal').classList.remove('hidden');
         }
 
         function viewStaff() {
             // Navigate to staff management page
-            window.location.href = '{{ route('dashboard.staff.index') }}';
+            const contentDiv = document.querySelector('.space-y-6');
+            const staffIndexUrl = contentDiv ? contentDiv.dataset.staffIndex : '';
+            if (staffIndexUrl) {
+                window.location.href = staffIndexUrl;
+            }
         }
 
         function viewRevenue() {
             // Navigate to financial reports page with current filter
             const filter = document.getElementById('dateFilter').value;
-            let url = '{{ route('dashboard.reports.financial') }}';
+            const contentDiv = document.querySelector('.space-y-6');
+            let url = contentDiv ? contentDiv.dataset.reportsFinancial : '';
 
             if (filter !== 'today') {
                 url += `?date_range=${filter}`;
