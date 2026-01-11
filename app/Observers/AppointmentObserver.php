@@ -21,15 +21,8 @@ class AppointmentObserver
 
     public function created(Appointment $appointment)
     {
-        // Automatically create a pending payment when appointment is created
-        Payment::create([
-            'appointment_id' => $appointment->id,
-            'customer_id' => $appointment->customer_id,
-            'amount' => $appointment->total_amount,
-            'method' => $appointment->payment_method,
-            'status' => 'pending',
-            'notes' => 'Automatically created with appointment'
-        ]);
+        // Payment should be created after service completion, not automatically
+        // Removed automatic payment creation per defense feedback
     }
     private function createCommission(Appointment $appointment)
     {
@@ -63,21 +56,14 @@ class AppointmentObserver
         // When appointment is marked as completed
         if ($appointment->isDirty('status') && $appointment->status === 'completed') {
             $customer = Customer::find($appointment->customer_id);
-            $customer->increment('total_visits');
-            $customer->increment('total_spent', $appointment->total_amount);
-            $customer->update(['last_visit' => $appointment->start_datetime]);
-
-            // Mark payment as paid when appointment is completed
-            $payment = Payment::where('appointment_id', $appointment->id)->first();
-            if ($payment && $payment->status === 'pending') {
-                $payment->update([
-                    'status' => 'paid',
-                    'paid_at' => now()
-                ]);
+            if ($customer) {
+                $customer->increment('total_visits');
+                $customer->increment('total_spent', $appointment->total_amount);
+                $customer->update(['last_visit' => $appointment->start_datetime]);
             }
 
-            // Create commission for staff
-            $this->createCommission($appointment);
+            // Commission will be created when payment is marked as paid (in PaymentController)
+            // Payment should be done after service completion, not automatically
         }
 
         // When appointment is cancelled or failed

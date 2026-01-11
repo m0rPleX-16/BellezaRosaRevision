@@ -39,7 +39,25 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // 3. Run all seeders in correct order
+        // 3. Customer Users (for login testing)
+        $customerUsers = [
+            ['full_name' => 'John Smith', 'username' => 'johnsmith', 'phone' => '09171234568'],
+            ['full_name' => 'Mary Johnson', 'username' => 'maryjohnson', 'phone' => '09171234569'],
+            ['full_name' => 'David Williams', 'username' => 'davidwilliams', 'phone' => '09171234570'],
+        ];
+
+        foreach ($customerUsers as $customer) {
+            User::create([
+                'full_name' => $customer['full_name'],
+                'username'  => $customer['username'],
+                'phone'     => $customer['phone'],
+                'password'  => Hash::make('password'),
+                'role'      => 'customer',
+                'is_active' => true,
+            ]);
+        }
+
+        // 4. Run all seeders in correct order
         $this->call([
             ServiceCategorySeeder::class,
             ServiceSeeder::class,

@@ -50,6 +50,11 @@ class AppointmentController extends Controller
         // Start with the base query
         $query = Appointment::with(['customer', 'service', 'staff.user', 'payment']);
 
+        // Staff can only view their own appointments
+        if (auth()->user()->isStaff() && auth()->user()->staff) {
+            $query->where('staff_id', auth()->user()->staff->id);
+        }
+
         // 1. Search filter (customer name, phone, or service name)
         if ($search = request('search')) {
             $query->where(function ($q) use ($search) {
@@ -227,9 +232,6 @@ class AppointmentController extends Controller
             'status' => 'scheduled',
         ]);
 
-        ToastHelper::success('Appointment created successfully!');
-        return redirect()->route('dashboard.appointments.index');
-
         return redirect()->route('dashboard.appointments.index')
             ->with('success', 'Appointment created successfully!');
     }
@@ -246,10 +248,40 @@ class AppointmentController extends Controller
         $service = Service::findOrFail($request->service_id);
         $duration = $service->duration_minutes;
 
+        // Minimum duration check (30 minutes)
+        if ($duration < 30) {
+            return back()->withErrors([
+                'service_id' => 'Service duration must be at least 30 minutes.'
+            ]);
+        }
+
+        // Get salon settings for business hours validation
+        $salonSettings = SalonSetting::getSettings();
+        $startDateTime = Carbon::parse($request->start_datetime);
+        $startTime = $startDateTime->format('H:i:s');
+
+        // Validate business hours
+        if ($startTime < $salonSettings->opening_time || $startTime > $salonSettings->closing_time) {
+            return back()->withErrors([
+                'start_datetime' => 'Appointments must be within business hours: ' .
+                    Carbon::createFromFormat('H:i:s', $salonSettings->opening_time)->format('g:i A') . ' - ' .
+                    Carbon::createFromFormat('H:i:s', $salonSettings->closing_time)->format('g:i A')
+            ]);
+        }
+
         // Check staff availability, excluding the current appointment itself
         if (!$this->isStaffAvailable($request->staff_id, $request->start_datetime, $duration, $appointment->id)) {
             return back()->withErrors([
-                'start_datetime' => 'Staff is not available for the selected time slot.'
+                'start_datetime' => 'Staff is not available for the selected time slot. Please choose another time.'
+            ]);
+        }
+
+        // Calculate end time and ensure it doesn't exceed closing time
+        $endDateTime = $startDateTime->copy()->addMinutes($duration);
+        $closingTimeToday = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $salonSettings->closing_time);
+        if ($endDateTime->gt($closingTimeToday)) {
+            return back()->withErrors([
+                'start_datetime' => 'Appointment would end after closing time. Please select an earlier time.'
             ]);
         }
 
@@ -269,15 +301,45 @@ class AppointmentController extends Controller
             ->with('success', 'Appointment updated successfully!');
     }
 
-    public function updateStatus(Request $request, Appointment $appointment)
+    /**
+     * Check staff availability via AJAX
+     */
+    public function checkAvailability(Request $request)
     {
         $request->validate([
-            'status' => 'required|in:scheduled,confirmed,in_progress,completed,cancelled,no_show'
+            'staff_id' => 'required|exists:staff,id',
+            'start_datetime' => 'required|date',
+            'duration_minutes' => 'required|integer|min:1',
+        ]);
+
+        $isAvailable = $this->isStaffAvailable(
+            $request->staff_id,
+            $request->start_datetime,
+            $request->duration_minutes
+        );
+
+        return response()->json([
+            'available' => $isAvailable,
+            'message' => $isAvailable 
+                ? 'Staff is available for this time slot.' 
+                : 'Staff is not available for this time slot.'
+        ]);
+    }
+
+    public function updateStatus(Request $request, Appointment $appointment)
+    {
+        // Staff can only update their own appointments
+        if (auth()->user()->isStaff() && auth()->user()->staff && $appointment->staff_id !== auth()->user()->staff->id) {
+            abort(403, 'You can only update your own appointments.');
+        }
+
+        $request->validate([
+            'status' => 'required|in:scheduled,confirmed,in_progress,completed,cancelled,no_show,failed'
         ]);
 
         $appointment->update(['status' => $request->status]);
 
-        return back()->with('success', 'Appointment status updated!');
+        return back()->with('success', 'Appointment status updated successfully!');
     }
     // Add these methods to AppointmentController.php
     public function showCancelForm(Appointment $appointment)

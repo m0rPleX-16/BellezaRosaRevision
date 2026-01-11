@@ -522,7 +522,9 @@
     </style>
 </head>
 
-<body>
+<body data-auth="{{ auth()->check() ? '1' : '0' }}" 
+      data-unread-url="{{ route('messages.unreadCount') }}" 
+      data-messages-url="{{ route('messages.index') }}">
     <!-- Header -->
     <header id="header">
         <div class="container">
@@ -540,7 +542,7 @@
 
                     @auth
                         @if (auth()->user()->isAdmin() || auth()->user()->isStaff())
-                            <li><a href="{{ route('dashboard.index') }}" class="btn btn-primary">Dashboard</a></li>
+                            <li><a href="{{ route('dashboard') }}" class="btn btn-primary">Dashboard</a></li>
                         @else
                             <li>
                                 <div style="position: relative;">
@@ -815,10 +817,17 @@
             window.dispatchEvent(new CustomEvent('open-booking-modal'));
         }
 
+        // Check if user is authenticated and set URLs from data attributes
+        const bodyEl = document.body;
+        const isAuthenticated = bodyEl.dataset.auth === '1';
+        const unreadCountUrl = bodyEl.dataset.unreadUrl;
+        const messagesIndexUrl = bodyEl.dataset.messagesUrl;
+
         // Update notification badge periodically
         function updateNotificationBadge() {
-            @auth
-            fetch('{{ route('messages.unreadCount') }}')
+            if (!isAuthenticated) return;
+            
+            fetch(unreadCountUrl)
                 .then(response => response.json())
                 .then(data => {
                     const badge = document.getElementById('notificationBadge');
@@ -827,7 +836,7 @@
                     if (total > 0) {
                         if (!badge) {
                             // Create badge if it doesn't exist
-                            const bellLink = document.querySelector('a[href="{{ route('messages.index') }}"]');
+                            const bellLink = document.querySelector('a[href="' + messagesIndexUrl + '"]');
                             if (bellLink) {
                                 const newBadge = document.createElement('span');
                                 newBadge.id = 'notificationBadge';
@@ -841,15 +850,19 @@
                     } else if (badge) {
                         badge.remove();
                     }
+                })
+                .catch(error => {
+                    console.error('Error fetching unread count:', error);
                 });
-        @endauth
         }
 
-        // Update every 30 seconds
-        setInterval(updateNotificationBadge, 30000);
+        // Update every 30 seconds (only if authenticated)
+        if (isAuthenticated) {
+            setInterval(updateNotificationBadge, 30000);
 
-        // Initial update
-        document.addEventListener('DOMContentLoaded', updateNotificationBadge);
+            // Initial update
+            document.addEventListener('DOMContentLoaded', updateNotificationBadge);
+        }
     </script>
 </body>
 

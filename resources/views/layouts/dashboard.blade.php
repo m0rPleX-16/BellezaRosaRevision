@@ -91,34 +91,34 @@
         <!-- Update in dashboard.blade.php sidebar -->
         <nav class="mt-6">
             <div class="nav-item {{ request()->is('dashboard') ? 'active' : '' }}"
-                onclick="location.href='{{ route('dashboard.index') }}'">
+                data-href="{{ route('dashboard') }}">
                 <i class="fas fa-home mr-3"></i> Dashboard
             </div>
             <div class="nav-item {{ request()->is('dashboard/appointments*') ? 'active' : '' }}"
-                onclick="location.href='{{ route('dashboard.appointments.index') }}'">
+                data-href="{{ route('dashboard.appointments.index') }}">
                 <i class="fas fa-calendar-check mr-3"></i> Appointments
             </div>
 
             <div class="nav-item {{ request()->is('dashboard/payments*') ? 'active' : '' }}"
-                onclick="location.href='{{ route('dashboard.payments.index') }}'">
+                data-href="{{ route('dashboard.payments.index') }}">
                 <i class="fas fa-money-bill-wave mr-3"></i> Payments
             </div>
             <div class="nav-item {{ request()->is('dashboard/services*') ? 'active' : '' }}"
-                onclick="location.href='{{ route('dashboard.services.index') }}'">
+                data-href="{{ route('dashboard.services.index') }}">
                 <i class="fas fa-spa mr-3"></i> Services
             </div>
             <div class="nav-item {{ request()->is('dashboard/inventory*') ? 'active' : '' }}"
-                onclick="location.href='{{ route('dashboard.inventory.index') }}'">
+                data-href="{{ route('dashboard.inventory.index') }}">
                 <i class="fas fa-boxes mr-3"></i> Inventory
             </div>
             @if (auth()->user()->isAdmin())
                 <div class="nav-item {{ request()->is('dashboard/users*') ? 'active' : '' }}"
-                    onclick="location.href='{{ route('dashboard.users.index') }}'">
+                    data-href="{{ route('dashboard.users.index') }}">
                     <i class="fas fa-users-cog mr-3"></i> Manage Users
                 </div>
             @endif
             <div class="nav-item {{ request()->is('dashboard/reports*') ? 'active' : '' }}"
-                onclick="location.href='{{ route('dashboard.reports.index') }}'">
+                data-href="{{ route('dashboard.reports.index') }}">
                 <i class="fas fa-chart-bar mr-3"></i> Reports
             </div>
             <div class="nav-item mt-auto cursor-pointer" onclick="confirmLogout()">
@@ -138,6 +138,16 @@
 </body>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // Handle navigation clicks
+    document.querySelectorAll('.nav-item[data-href]').forEach(function(item) {
+        item.addEventListener('click', function() {
+            const href = this.getAttribute('data-href');
+            if (href) {
+                location.href = href;
+            }
+        });
+    });
+
     async function confirmLogout() {
         const result = await Swal.fire({
             title: 'Logout?',

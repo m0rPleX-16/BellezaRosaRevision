@@ -38,12 +38,22 @@
                 <!-- Status -->
                 <div class="form-group">
                     <label class="block text-gray-700 font-semibold mb-2">Status *</label>
-                    <select name="status" required class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                    <select name="status" id="paymentStatusEdit" data-old-value="{{ $payment->status }}" required class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                         <option value="pending" {{ $payment->status == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="paid" {{ $payment->status == 'paid' ? 'selected' : '' }}>Paid</option>
                         <option value="failed" {{ $payment->status == 'failed' ? 'selected' : '' }}>Failed</option>
                         <option value="refunded" {{ $payment->status == 'refunded' ? 'selected' : '' }}>Refunded</option>
                     </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <strong>Note:</strong> "Failed" = Payment failed or declined. "Refunded" = Payment was returned to customer.
+                    </p>
+                </div>
+                
+                <div id="cancellationReasonDivEdit" class="form-group hidden">
+                    <label class="block text-gray-700 font-semibold mb-2">Reason <span class="text-red-500">*</span></label>
+                    <textarea name="cancellation_reason" rows="3" 
+                              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                              placeholder="Please provide a reason for this status change"></textarea>
                 </div>
 
                 <!-- Reference Number -->
@@ -72,4 +82,75 @@
         </form>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Show/hide cancellation reason field
+    document.getElementById('paymentStatusEdit')?.addEventListener('change', function() {
+        const status = this.value;
+        const reasonDiv = document.getElementById('cancellationReasonDivEdit');
+        if (['failed', 'refunded'].includes(status)) {
+            reasonDiv?.classList.remove('hidden');
+        } else {
+            reasonDiv?.classList.add('hidden');
+        }
+    });
+
+    // Confirmation for payment update
+    document.querySelector('form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const form = this;
+        const statusSelect = document.getElementById('paymentStatusEdit');
+        const newStatus = statusSelect.value;
+        const oldStatus = statusSelect.dataset.oldValue;
+        
+        if (newStatus === oldStatus) {
+            Swal.fire({
+                title: 'No Change',
+                text: 'Please select a different status.',
+                icon: 'info',
+                confirmButtonColor: '#3b82f6'
+            });
+            return false;
+        }
+
+        // Check if reason is required
+        const reasonDiv = document.getElementById('cancellationReasonDivEdit');
+        if (reasonDiv && !reasonDiv.classList.contains('hidden')) {
+            const reasonInput = form.querySelector('textarea[name="cancellation_reason"]');
+            if (!reasonInput.value.trim()) {
+                Swal.fire({
+                    title: 'Reason Required',
+                    text: 'Please provide a reason for marking payment as ' + newStatus + '.',
+                    icon: 'warning',
+                    confirmButtonColor: '#dc2626'
+                });
+                reasonInput.focus();
+                return false;
+            }
+        }
+
+        const statusLabels = {
+            'pending': 'Pending',
+            'paid': 'Paid',
+            'failed': 'Failed',
+            'refunded': 'Refunded'
+        };
+
+        const result = await Swal.fire({
+            title: 'Confirm Payment Update',
+            html: `Are you sure you want to change payment status from <strong>${statusLabels[oldStatus]}</strong> to <strong>${statusLabels[newStatus]}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: newStatus === 'paid' ? '#10b981' : '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, update it',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+</script>
 @endsection

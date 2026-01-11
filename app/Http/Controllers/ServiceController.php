@@ -5,17 +5,31 @@ namespace App\Http\Controllers;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ServiceController extends Controller
 {
     public function index()
     {
         // Check if user has access
-        if (!auth()->user()->isAdmin() && !auth()->user()->isStaff()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if (!$user || (!$user->isAdmin() && !$user->isStaff())) {
             abort(403, 'Unauthorized access.');
         }
 
-        $services = Service::with('category')->get();
+        // Only show active services that are available in the parlor
+        $query = Service::where('is_active', true)->with('category');
+
+        // Staff can only see services matching their specialty
+        if ($user->isStaff() && $user->staff) {
+            $staffSpecialty = $user->staff->specialty;
+            $query->whereHas('category', function ($q) use ($staffSpecialty) {
+                $q->where('specialty', $staffSpecialty)->orWhere('specialty', 'both');
+            });
+        }
+
+        $services = $query->get();
         $categories = ServiceCategory::all();
 
         return view('dashboard.services.index', compact('services', 'categories'));
@@ -23,7 +37,9 @@ class ServiceController extends Controller
 
     public function create()
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if (!$user || !$user->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
@@ -33,17 +49,21 @@ class ServiceController extends Controller
 
     public function store(Request $request)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if (!$user || !$user->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
         $request->validate([
             'name' => 'required|string|max:100',
             'category_id' => 'required|exists:service_categories,id',
-            'duration_minutes' => 'required|integer|min:1',
+            'duration_minutes' => 'required|integer|min:30',
             'price_regular' => 'required|numeric|min:0',
             'price_premium' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
+        ], [
+            'duration_minutes.min' => 'Service duration must be at least 30 minutes.',
         ]);
 
         Service::create([
@@ -63,7 +83,9 @@ class ServiceController extends Controller
 
     public function show(Service $service)
     {
-        if (!auth()->user()->isAdmin() && !auth()->user()->isStaff()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if (!$user || (!$user->isAdmin() && !$user->isStaff())) {
             abort(403, 'Unauthorized access.');
         }
 
@@ -72,7 +94,9 @@ class ServiceController extends Controller
 
     public function edit(Service $service)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if (!$user || !$user->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
@@ -82,17 +106,21 @@ class ServiceController extends Controller
 
     public function update(Request $request, Service $service)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if (!$user || !$user->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
         $request->validate([
             'name' => 'required|string|max:100',
             'category_id' => 'required|exists:service_categories,id',
-            'duration_minutes' => 'required|integer|min:1',
+            'duration_minutes' => 'required|integer|min:30',
             'price_regular' => 'required|numeric|min:0',
             'price_premium' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
+        ], [
+            'duration_minutes.min' => 'Service duration must be at least 30 minutes.',
         ]);
 
         $service->update([
@@ -112,7 +140,9 @@ class ServiceController extends Controller
 
     public function destroy(Service $service)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if (!$user || !$user->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 

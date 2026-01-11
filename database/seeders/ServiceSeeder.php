@@ -35,10 +35,38 @@ class ServiceSeeder extends Seeder
             'Full Makeup', 'Bridal Makeup', 'Evening Makeup', 'Airbrush Makeup',
         ];
 
+        // Realistic price ranges for salon services (in PHP)
+        $priceRanges = [
+            'Regular Haircut' => [150, 300],
+            'Stylist Haircut' => [300, 500],
+            'Kids Haircut' => [100, 200],
+            'Senior Haircut' => [120, 250],
+            'Blow Dry' => [200, 400],
+            'Hair Wash & Blow Dry' => [250, 450],
+            'Single Process Color' => [800, 1500],
+            'Full Highlight' => [1500, 3000],
+            'Balayage' => [2000, 4000],
+            'Regular Manicure' => [150, 300],
+            'Spa Manicure' => [300, 500],
+            'Gel Manicure' => [400, 700],
+            'Regular Pedicure' => [200, 400],
+            'Spa Pedicure' => [400, 700],
+            'Gel Pedicure' => [500, 800],
+        ];
+
         for ($i = 0; $i < 50; $i++) {
+            $serviceName = $serviceNames[$i] ?? "Service " . ($i + 1);
             $isPremium = rand(1, 100) <= 30;
-            $priceRegular = rand(10000, 200000) / 100;
-            $pricePremium = $isPremium ? $priceRegular * 1.5 : null;
+            
+            // Use realistic prices if available, otherwise generate reasonable range
+            if (isset($priceRanges[$serviceName])) {
+                $priceRegular = rand($priceRanges[$serviceName][0] * 100, $priceRanges[$serviceName][1] * 100) / 100;
+            } else {
+                // Default realistic range: 150-2000 PHP
+                $priceRegular = rand(15000, 200000) / 100;
+            }
+            
+            $pricePremium = $isPremium ? $priceRegular * 1.3 : null;
             
             $services[] = [
                 'category_id' => $categories[array_rand($categories)],

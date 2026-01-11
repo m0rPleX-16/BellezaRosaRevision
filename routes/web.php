@@ -9,9 +9,10 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportsController;
-use App\Http\Controllers\StaffController;        // ← ADD THIS
-use App\Http\Controllers\MessageController;     // ← ADD THIS (for messaging)
+use App\Http\Controllers\StaffController;
+use App\Http\Controllers\MessageController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 // Guest Routes
 Route::get('/', function () {
@@ -33,8 +34,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Home redirect based on role
     Route::get('/home', function () {
-        if (auth()->user()->isAdmin() || auth()->user()->isStaff()) {
-            return redirect()->route('dashboard.index');
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if ($user && ($user->isAdmin() || $user->isStaff())) {
+            return redirect()->route('dashboard');
         }
         return view('landing');
     })->name('home');
@@ -76,6 +79,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
         Route::get('appointments/{appointment}/cancel', [AppointmentController::class, 'showCancelForm'])->name('appointments.cancel.form');
         Route::post('appointments/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
+        Route::post('appointments/check-availability', [AppointmentController::class, 'checkAvailability'])->name('appointments.checkAvailability');
 
         // Services
         Route::resource('services', ServiceController::class);
