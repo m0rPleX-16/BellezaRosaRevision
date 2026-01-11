@@ -461,9 +461,9 @@
 
             document.getElementById('revenueLabel').textContent = data.label + ' Revenue';
             document.getElementById('revenueAmount').textContent = '₱' + Number(data.stats.revenue).toLocaleString(
-            'en-PH', {
-                minimumFractionDigits: 2
-            });
+                'en-PH', {
+                    minimumFractionDigits: 2
+                });
 
             document.getElementById('totalStaff').textContent = data.stats.total_staff;
 
@@ -648,7 +648,7 @@
                         tableHtml += '</div>';
                     } else {
                         tableHtml +=
-                        '<span class="text-gray-400 text-sm">No services availed in this period</span>';
+                            '<span class="text-gray-400 text-sm">No services availed in this period</span>';
                     }
 
                     tableHtml += `
