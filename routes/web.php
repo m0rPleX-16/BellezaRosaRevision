@@ -10,7 +10,8 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\StaffController;        // ← ADD THIS
-use App\Http\Controllers\MessageController;     // ← ADD THIS (for messaging)
+use App\Http\Controllers\MessageController; 
+use App\Http\Controllers\ProfileController;    // ← ADD THIS (for messaging)
 use Illuminate\Support\Facades\Route;
 
 // Guest Routes
@@ -30,6 +31,11 @@ Route::post('/guest-book', [CustomerBookingController::class, 'store'])->name('g
 
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
+
+    // Profile routes
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Home redirect based on role
     Route::get('/home', function () {
@@ -117,7 +123,3 @@ Route::get('/staff', [StaffController::class, 'index'])->name('dashboard.staff.i
 Route::get('/reports/financial', [ReportsController::class, 'financial'])->name('dashboard.reports.financial');
 Route::post('/appointments', [AppointmentController::class, 'store'])->name('dashboard.appointments.store');
 Route::get('/appointments/create', [AppointmentController::class, 'create'])->name('dashboard.appointments.create');
-
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-});
