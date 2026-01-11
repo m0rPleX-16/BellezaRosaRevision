@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use App\Models\Appointment;
+use Illuminate\Support\Facades\Blade;
+use App\Observers\AppointmentObserver;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Route;
+
+Appointment::observe(AppointmentObserver::class);
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+ // Set application timezone
+        config(['app.timezone' => 'Asia/Manila']);
+        
+        // Set Carbon (Laravel's date library) timezone
+        Carbon::setLocale('en');
+        date_default_timezone_set('Asia/Manila');
+        // Add toast directive
+    Blade::directive('toast', function ($expression) {
+        return "<?php if(session()->has('toast')): ?>
+            <x-toast :type=\"session('toast.type', 'success')\" 
+                     :message=\"session('toast.message')\" 
+                     :duration=\"session('toast.duration', 5000)\" />
+        <?php endif; ?>";
+    });
+
+    // Ensure router knows role middleware alias
+    Route::aliasMiddleware('role', \App\Http\Middleware\CheckRole::class);
+   }
+}
