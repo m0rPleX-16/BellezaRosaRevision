@@ -26,7 +26,7 @@ class StaffController extends Controller
     {
         $user = Auth::user();
         $staff = $user->staff;
-        
+
         if (!$staff) {
             abort(403, 'Staff profile not found.');
         }
@@ -37,7 +37,7 @@ class StaffController extends Controller
             ->with(['customer', 'service'])
             ->orderBy('start_datetime')
             ->get()
-            ->map(function($appointment) {
+            ->map(function ($appointment) {
                 $appointment->duration = $appointment->service->duration_minutes;
                 return $appointment;
             });
@@ -90,7 +90,7 @@ class StaffController extends Controller
     {
         $user = Auth::user();
         $staff = $user->staff;
-        
+
         if (!$staff) {
             abort(403, 'Staff profile not found.');
         }
@@ -103,11 +103,11 @@ class StaffController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->whereHas('customer', function ($cq) use ($search) {
                     $cq->where('full_name', 'like', "%{$search}%")
-                       ->orWhere('phone', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', "%{$search}%");
                 })
-                ->orWhereHas('service', function ($sq) use ($search) {
-                    $sq->where('name', 'like', "%{$search}%");
-                });
+                    ->orWhereHas('service', function ($sq) use ($search) {
+                        $sq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -131,7 +131,7 @@ class StaffController extends Controller
     {
         $user = Auth::user();
         $staff = $user->staff;
-        
+
         if (!$staff) {
             abort(403, 'Staff profile not found.');
         }
@@ -139,33 +139,35 @@ class StaffController extends Controller
         $year = $request->get('year', date('Y'));
         $month = $request->get('month', date('n'));
 
+        // Get all commissions for the staff member with pagination
         $commissions = Commission::where('staff_id', $staff->id)
-            ->when($year, function($query) use ($year) {
+            ->when($year, function ($query) use ($year) {
                 return $query->whereYear('created_at', $year);
             })
-            ->when($month, function($query) use ($month) {
+            ->when($month, function ($query) use ($month) {
                 return $query->whereMonth('created_at', $month);
             })
             ->with(['appointment.service', 'appointment.customer'])
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->paginate(15);
 
-        // Summary statistics
-        $monthlySummary = Commission::where('staff_id', $staff->id)
+        // Calculate summary statistics
+        $totalCommissions = Commission::where('staff_id', $staff->id)->sum('amount');
+        
+        $monthlyCommissions = Commission::where('staff_id', $staff->id)
             ->whereYear('created_at', $year)
             ->whereMonth('created_at', $month)
-            ->selectRaw('SUM(amount) as total_commission, COUNT(*) as total_services')
-            ->first();
-
-        $yearlySummary = Commission::where('staff_id', $staff->id)
-            ->whereYear('created_at', $year)
-            ->selectRaw('SUM(amount) as yearly_total, COUNT(*) as yearly_services')
-            ->first();
+            ->sum('amount');
+            
+        $pendingCommissions = Commission::where('staff_id', $staff->id)
+            ->where('status', 'pending')
+            ->sum('amount');
 
         return view('dashboard.staff.commission', compact(
             'commissions',
-            'monthlySummary',
-            'yearlySummary',
+            'totalCommissions',
+            'monthlyCommissions',
+            'pendingCommissions',
             'year',
             'month'
         ));
@@ -178,7 +180,7 @@ class StaffController extends Controller
     {
         $user = Auth::user();
         $staff = $user->staff;
-        
+
         if (!$staff) {
             abort(403, 'Staff profile not found.');
         }
@@ -219,7 +221,7 @@ class StaffController extends Controller
     {
         $user = Auth::user();
         $staff = $user->staff;
-        
+
         if (!$staff) {
             return response()->json(['success' => false]);
         }
@@ -260,7 +262,7 @@ class StaffController extends Controller
     {
         $user = Auth::user();
         $staff = $user->staff;
-        
+
         // Check if appointment belongs to this staff
         if ($appointment->staff_id !== $staff->id) {
             abort(403, 'You can only view your own appointments.');
@@ -268,6 +270,6 @@ class StaffController extends Controller
 
         $appointment->load(['customer', 'service', 'payment', 'addons']);
 
-        return view('dashboard.staff.appointment-show', compact('appointment'));
+        return view('dashboard.staff.appointments-show', compact('appointment'));
     }
 }

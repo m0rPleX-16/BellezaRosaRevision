@@ -530,4 +530,10 @@ public function download(Request $request)
         
         return $content;
     }
+
+    public function financial(Request $request)
+    {
+        // Placeholder for financial report logic
+        return view('dashboard.reports.financial');
+    }
 }

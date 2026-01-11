@@ -134,6 +134,13 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex space-x-2">
+                                        <!-- Show Button -->
+                                        <a href="{{ route('dashboard.users.show', $user) }}"
+                                            class="text-blue-600 hover:text-blue-800 transition" title="View User">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+
+                                        <!-- Role Dropdown -->
                                         <form action="{{ route('dashboard.users.role', $user) }}" method="POST">
                                             @csrf
                                             @method('PATCH')
@@ -147,11 +154,14 @@
                                                 </option>
                                             </select>
                                         </form>
+
+                                        <!-- Toggle Active Status -->
                                         <form action="{{ route('dashboard.users.toggle', $user) }}" method="POST">
                                             @csrf
                                             @method('PATCH')
                                             <button type="submit"
-                                                class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-lg transition">
+                                                class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-lg transition"
+                                                title="{{ $user->is_active ? 'Deactivate User' : 'Activate User' }}">
                                                 {{ $user->is_active ? 'Deactivate' : 'Activate' }}
                                             </button>
                                         </form>
@@ -187,47 +197,102 @@
                     </div>
                 </div>
                 <div class="p-6">
-                    <form action="{{ route('register') }}" method="POST">
+                    <form action="{{ route('dashboard.users.store') }}" method="POST" id="addUserForm">
                         @csrf
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div class="form-group">
-                                <label class="block text-gray-700 font-semibold mb-2">Full Name</label>
-                                <input type="text" name="full_name" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
-                                    placeholder="Enter full name">
+                        <div class="space-y-4">
+                            @if ($errors->any())
+                                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4" role="alert">
+                                    <p class="font-bold">Error</p>
+                                    <ul class="list-disc pl-5 mt-2">
+                                        @foreach ($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label class="block text-gray-700 font-semibold mb-2">Full Name *</label>
+                                    <input type="text" name="full_name" required
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                                        placeholder="Enter full name" value="{{ old('full_name') }}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="block text-gray-700 font-semibold mb-2">Username *</label>
+                                    <input type="text" name="username" required
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                                        placeholder="Choose username" value="{{ old('username') }}">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label class="block text-gray-700 font-semibold mb-2">Username</label>
-                                <input type="text" name="username" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
-                                    placeholder="Choose username">
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label class="block text-gray-700 font-semibold mb-2">Email *</label>
+                                    <input type="email" name="email" required
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                                        placeholder="Email address" value="{{ old('email') }}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="block text-gray-700 font-semibold mb-2">Phone</label>
+                                    <input type="tel" name="phone"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                                        placeholder="Phone number" value="{{ old('phone') }}">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label class="block text-gray-700 font-semibold mb-2">Phone</label>
-                                <input type="tel" name="phone" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
-                                    placeholder="Phone number">
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label class="block text-gray-700 font-semibold mb-2">Role *</label>
+                                    <select name="role" required
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                                        <option value="" disabled {{ !old('role') ? 'selected' : '' }}>Select role
+                                        </option>
+                                        <option value="customer" {{ old('role') == 'customer' ? 'selected' : '' }}>
+                                            Customer</option>
+                                        <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff
+                                        </option>
+                                        <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="block text-gray-700 font-semibold mb-2">Password *</label>
+                                    <input type="password" name="password" required
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                                        placeholder="Enter password">
+                                </div>
                             </div>
+
                             <div class="form-group">
-                                <label class="block text-gray-700 font-semibold mb-2">Role</label>
-                                <select name="role" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
-                                    <option value="customer">Customer</option>
-                                    <option value="staff">Staff</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="block text-gray-700 font-semibold mb-2">Password</label>
-                                <input type="password" name="password" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
-                                    placeholder="Enter password">
-                            </div>
-                            <div class="form-group">
-                                <label class="block text-gray-700 font-semibold mb-2">Confirm Password</label>
+                                <label class="block text-gray-700 font-semibold mb-2">Confirm Password *</label>
                                 <input type="password" name="password_confirmation" required
                                     class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
                                     placeholder="Confirm password">
+                            </div>
+
+                            <!-- Staff Specific Fields -->
+                            <div id="staffFields" class="hidden bg-blue-50 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold text-blue-800 mb-3">Staff Information</h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="block text-gray-700 font-semibold mb-2">Specialty</label>
+                                        <input type="text" name="specialty"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                                            placeholder="e.g., Hair Stylist, Nail Technician"
+                                            value="{{ old('specialty', 'General') }}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="block text-gray-700 font-semibold mb-2">Color Code</label>
+                                        <div class="flex items-center">
+                                            <input type="color" name="color_code" value="#3b82f6"
+                                                class="w-12 h-12 rounded-lg border border-gray-300 mr-3">
+                                            <input type="text" name="color_code_display"
+                                                class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                                                placeholder="#3b82f6" value="{{ old('color_code', '#3b82f6') }}">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-6 flex justify-end space-x-4">
@@ -247,12 +312,78 @@
 
         <script>
             function openAddUserModal() {
+                // Reset form and clear any previous errors
+                const form = document.getElementById('addUserForm');
+                if (form) {
+                    form.reset();
+                    // Clear any error messages
+                    const errorMessages = document.querySelectorAll('.error-message');
+                    errorMessages.forEach(el => el.remove());
+                    // Reset staff fields visibility
+                    toggleStaffFields();
+                }
                 document.getElementById('addUserModal').classList.remove('hidden');
             }
 
             function closeModal(modalId) {
                 document.getElementById(modalId).classList.add('hidden');
             }
+
+            // Toggle staff fields based on role selection
+            function toggleStaffFields() {
+                const roleSelect = document.querySelector('select[name="role"]');
+                const staffFields = document.getElementById('staffFields');
+
+                if (roleSelect && staffFields) {
+                    if (roleSelect.value === 'staff') {
+                        staffFields.classList.remove('hidden');
+                    } else {
+                        staffFields.classList.add('hidden');
+                    }
+                }
+            }
+
+            // Sync color picker and text input
+            function syncColorValue(input) {
+                const colorInput = document.querySelector('input[name="color_code"]');
+                const displayInput = document.querySelector('input[name="color_code_display"]');
+
+                if (input.name === 'color_code') {
+                    displayInput.value = input.value;
+                } else if (input.name === 'color_code_display') {
+                    // Validate hex color
+                    if (/^#[0-9A-F]{6}$/i.test(input.value)) {
+                        colorInput.value = input.value;
+                    }
+                }
+            }
+
+            // Initialize event listeners when the document is ready
+            document.addEventListener('DOMContentLoaded', function() {
+                // Toggle staff fields when role changes
+                const roleSelect = document.querySelector('select[name="role"]');
+                if (roleSelect) {
+                    roleSelect.addEventListener('change', toggleStaffFields);
+                }
+
+                // Initialize color picker sync
+                const colorInputs = document.querySelectorAll('input[name^="color_code"]');
+                colorInputs.forEach(input => {
+                    input.addEventListener('input', (e) => syncColorValue(e.target));
+                });
+
+                // Handle form submission
+                const form = document.getElementById('addUserForm');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        const submitButton = form.querySelector('button[type="submit"]');
+                        if (submitButton) {
+                            submitButton.disabled = true;
+                            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating...';
+                        }
+                    });
+                }
+            });
 
             // Close modal when clicking outside
             window.onclick = function(event) {

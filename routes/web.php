@@ -43,7 +43,7 @@ Route::middleware(['auth'])->group(function () {
         /** @var \App\Models\User|null $user */
         $user = Auth::user();
         if ($user && ($user->isAdmin() || $user->isStaff())) {
-            return redirect()->route('dashboard');
+            return redirect()->route('dashboard.index');
         }
         return view('landing');
     })->name('home');
@@ -69,9 +69,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/statistics', [StaffController::class, 'getStatistics'])->name('statistics');
     });
 
-    // Admin-only routes (user management)
+    // Admin-only routes
     Route::middleware(['role:admin'])->prefix('dashboard')->name('dashboard.')->group(function () {
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}', [UserManagementController::class, 'show'])->name('users.show');
+        Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}/role', [UserManagementController::class, 'updateRole'])->name('users.role.update');
         Route::patch('/users/{user}/role', [UserManagementController::class, 'updateRole'])->name('users.role');
         Route::patch('/users/{user}/toggle-active', [UserManagementController::class, 'toggleActive'])->name('users.toggle');
     });
@@ -106,6 +109,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/revenue', [ReportsController::class, 'revenue'])->name('revenue');
             Route::get('/inventory', [ReportsController::class, 'inventory'])->name('inventory');
             Route::post('/download', [ReportsController::class, 'download'])->name('download');
+            Route::get('/financial', [ReportsController::class, 'financial'])->name('financial');
         });
 
         // Inventory

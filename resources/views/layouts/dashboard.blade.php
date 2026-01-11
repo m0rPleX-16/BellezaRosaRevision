@@ -91,7 +91,7 @@
         <!-- Update in dashboard.blade.php sidebar -->
         <nav class="mt-6">
             <div class="nav-item {{ request()->is('dashboard') ? 'active' : '' }}"
-                data-href="{{ route('dashboard') }}">
+                data-href="{{ route('dashboard.index') }}">
                 <i class="fas fa-home mr-3"></i> Dashboard
             </div>
             <div class="nav-item {{ request()->is('dashboard/appointments*') ? 'active' : '' }}"

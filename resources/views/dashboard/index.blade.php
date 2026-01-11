@@ -1,19 +1,22 @@
 @extends('layouts.dashboard')
 
+@if (auth()->check() && auth()->user()->isStaff())
+    @php
+        header('Location: ' . route('dashboard.staff.index'));
+        exit();
+    @endphp
+@endif
+
 @section('title', 'Dashboard - Belleza Rosa')
 
 @section('content')
-    <div class="space-y-6" 
-         data-filter-url="{{ route('dashboard.filter') }}"
-         data-csrf-token="{{ csrf_token() }}"
-         data-appointments-index="{{ route('dashboard.appointments.index') }}"
-         data-staff-index="{{ route('dashboard.staff.index') }}"
-         data-reports-financial="{{ route('dashboard.reports.financial') }}"
-         data-customers-data="{{ json_encode($customersWithServices) }}"
-         data-total-services="{{ $totalServices ?? 0 }}"
-         data-popular-service="{{ $popularService ?? '' }}"
-         data-stats-label="{{ $stats_label ?? "Today's" }}"
-         data-total-customers="{{ $total_customers ?? 0 }}">
+    <div class="space-y-6" data-filter-url="{{ route('dashboard.filter') }}" data-csrf-token="{{ csrf_token() }}"
+        data-appointments-index="{{ route('dashboard.appointments.index') }}"
+        data-staff-index="{{ route('dashboard.users.index') }}"
+        data-reports-financial="{{ route('dashboard.reports.financial') }}"
+        data-customers-data="{{ json_encode($customersWithServices) }}" data-total-services="{{ $totalServices ?? 0 }}"
+        data-popular-service="{{ $popularService ?? '' }}" data-stats-label="{{ $stats_label ?? "Today's" }}"
+        data-total-customers="{{ $total_customers ?? 0 }}">
         <!-- Header with Date Filter -->
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <h1 class="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
@@ -369,7 +372,7 @@
                 const contentDiv1 = document.querySelector('.space-y-6');
                 const filterUrl1 = contentDiv1 ? contentDiv1.dataset.filterUrl : '';
                 const csrfToken1 = contentDiv1 ? contentDiv1.dataset.csrfToken : '';
-                
+
                 fetch(filterUrl1, {
                         method: 'POST',
                         headers: {
@@ -407,7 +410,7 @@
             const contentDiv = document.querySelector('.space-y-6');
             const filterUrl = contentDiv ? contentDiv.dataset.filterUrl : '';
             const csrfToken = contentDiv ? contentDiv.dataset.csrfToken : '';
-            
+
             fetch(filterUrl, {
                     method: 'POST',
                     headers: {
@@ -442,7 +445,7 @@
                 const contentDiv2 = document.querySelector('.space-y-6');
                 const filterUrl2 = contentDiv2 ? contentDiv2.dataset.filterUrl : '';
                 const csrfToken2 = contentDiv2 ? contentDiv2.dataset.csrfToken : '';
-                
+
                 fetch(filterUrl2, {
                         method: 'POST',
                         headers: {
@@ -577,12 +580,13 @@
                 // If no filter data, use the initial page data
                 const contentDiv = document.querySelector('.space-y-6');
                 if (contentDiv) {
-                    const customersData = contentDiv.dataset.customersData ? JSON.parse(contentDiv.dataset.customersData) : [];
+                    const customersData = contentDiv.dataset.customersData ? JSON.parse(contentDiv.dataset.customersData) :
+                        [];
                     const totalServices = parseInt(contentDiv.dataset.totalServices || 0);
                     const popularService = contentDiv.dataset.popularService || '';
                     const statsLabel = contentDiv.dataset.statsLabel || "Today's";
                     const totalCustomers = parseInt(contentDiv.dataset.totalCustomers || 0);
-                    
+
                     updateCustomerServicesModal({
                         customer_services: {
                             customers: customersData,

@@ -143,6 +143,22 @@ class AppointmentController extends Controller
             'servicesByCategory'
         ));
     }
+
+    public function edit(Appointment $appointment)
+    {
+        $customers = Customer::all();
+        $staff = Staff::with('user')->get();
+        $services = Service::where('is_active', true)->with('category')->get();
+        $servicesByCategory = $services->groupBy('category.name');
+
+        return view('dashboard.appointments.edit', compact(
+            'appointment',
+            'customers',
+            'services',
+            'staff',
+            'servicesByCategory'
+        ));
+    }
     public function getServicesByStaff($staffId)
     {
         $staff = Staff::findOrFail($staffId);

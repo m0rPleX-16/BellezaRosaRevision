@@ -72,7 +72,7 @@ class PaymentController extends Controller
     DB::transaction(function () use ($request, $appointment, $existingPayment) {
         $paymentData = [
             'amount' => $request->amount,
-            'method' => $request->method,
+            'method' => $request->method(),
             'reference_number' => $request->reference_number,
             'payment_details' => $request->payment_details,
             'status' => $request->status,
@@ -97,7 +97,7 @@ class PaymentController extends Controller
 
         // Update appointment payment method
         $appointment->update([
-            'payment_method' => $request->method
+            'payment_method' => $request->method()
         ]);
         
         // If payment is marked as paid, ensure appointment stays completed and create commission
@@ -201,7 +201,7 @@ class PaymentController extends Controller
 
         DB::transaction(function () use ($request, $payment, $oldStatus, $newStatus) {
             $payment->update([
-                'method' => $request->method,
+                'method' => $request->method(),
                 'amount' => $request->amount,
                 'reference_number' => $request->reference_number,
                 'status' => $newStatus,
@@ -221,5 +221,28 @@ class PaymentController extends Controller
 
         return redirect()->route('dashboard.payments.show', $payment)
             ->with('success', 'Payment updated successfully!');
+    }
+
+    public function createCommission(Appointment $appointment, Payment $payment)
+    {
+        // Check if commission already exists for this appointment
+        $existingCommission = Commission::where('appointment_id', $appointment->id)->first();
+        if ($existingCommission) {
+            return; // Commission already created
+        }
+
+        $salonSettings = SalonSetting::first();
+        if (!$salonSettings || !$salonSettings->commission_rate) {
+            return; // No commission rate set
+        }
+
+        $commissionAmount = ($salonSettings->commission_rate / 100) * $payment->amount;
+
+        Commission::create([
+            'appointment_id' => $appointment->id,
+            'staff_id' => $appointment->staff_id,
+            'amount' => $commissionAmount,
+            'status' => 'unpaid'
+        ]);
     }
 }

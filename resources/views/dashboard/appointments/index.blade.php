@@ -224,19 +224,29 @@
                                             </a>
                                         @endif
 
-                                        <!-- Record Payment -->
-                                        <a href="{{ route('dashboard.payments.create', $appointment) }}"
-                                            class="text-green-600 hover:text-green-800 transition" title="Record Payment">
-                                            <i class="fas fa-money-bill-wave"></i>
-                                        </a>
+                                        <!-- Record Payment (only for completed or in-progress appointments) -->
+                                        @if(in_array($appointment->status, ['completed', 'in_progress']))
+                                            <a href="{{ route('dashboard.payments.create', $appointment) }}"
+                                                class="text-green-600 hover:text-green-800 transition" title="Record Payment">
+                                                <i class="fas fa-money-bill-wave"></i>
+                                            </a>
+                                        @endif
 
                                         <!-- View Payment (if exists) -->
-                                        @if ($appointment->payment()->exists())
-                                            <a href="{{ route('dashboard.payments.show', $appointment->payment) }}"
-                                                class="text-indigo-600 hover:text-indigo-800 transition"
-                                                title="View Payment Details">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
+                                        @if($appointment->status === 'completed')
+                                            @if ($appointment->payment()->exists())
+                                                <a href="{{ route('dashboard.payments.show', $appointment->payment) }}"
+                                                    class="text-indigo-600 hover:text-indigo-800 transition"
+                                                    title="View Payment Details">
+                                                    <i class="fas fa-credit-card"></i>
+                                                </a>
+                                            @else
+                                                <a href="{{ route('dashboard.payments.create', ['appointment_id' => $appointment->id]) }}"
+                                                    class="text-green-600 hover:text-green-800 transition"
+                                                    title="Add Payment">
+                                                    <i class="fas fa-plus-circle"></i>
+                                                </a>
+                                            @endif
                                         @endif
 
                                         <!-- Paid Indicator -->

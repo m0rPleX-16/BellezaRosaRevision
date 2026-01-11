@@ -542,7 +542,7 @@
 
                     @auth
                         @if (auth()->user()->isAdmin() || auth()->user()->isStaff())
-                            <li><a href="{{ route('dashboard') }}" class="btn btn-primary">Dashboard</a></li>
+                            <li><a href="{{ route('dashboard.index') }}" class="btn btn-primary">Dashboard</a></li>
                         @else
                             <li>
                                 <div style="position: relative;">
