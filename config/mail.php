@@ -35,6 +35,18 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Support Email
+    |--------------------------------------------------------------------------
+    |
+    | This is the support email address that will be used in the email footers
+    | and for the support contact links.
+    |
+    */
+
+    'support_email' => env('MAIL_SUPPORT_EMAIL', 'support@example.com'),
+
     'mailers' => [
 
         'smtp' => [

@@ -7,11 +7,13 @@ use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Staff;
 use App\Models\Payment;
-use App\Helpers\ToastHelper;
-use Illuminate\Http\Request;
-use Carbon\Carbon;
 use App\Models\SalonSetting;
+use App\Helpers\ToastHelper;
+use Carbon\Carbon;
+use Carbon\CarbonInterval;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Response;
 
 class AppointmentController extends Controller
 {
@@ -43,6 +45,53 @@ class AppointmentController extends Controller
         }
 
         return !$query->exists();
+    }
+
+    /**
+     * Display a listing of the customer's appointments.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    public function customerIndex()
+    {
+        $customer = auth()->user()->customer;
+
+        // Get upcoming appointments (scheduled or confirmed and in the future)
+        $upcomingAppointments = $customer->appointments()
+            ->with(['service', 'staff'])
+            ->whereIn('status', ['scheduled', 'confirmed'])
+            ->where('start_datetime', '>=', now())
+            ->orderBy('start_datetime', 'asc')
+            ->get();
+
+        // Get past appointments (completed or in the past)
+        $pastAppointments = $customer->appointments()
+            ->with(['service', 'staff'])
+            ->where(function ($query) {
+                $query->where('status', 'completed')
+                    ->orWhere('start_datetime', '<', now());
+            })
+            ->whereNotIn('status', ['scheduled', 'confirmed', 'cancelled'])
+            ->orderBy('start_datetime', 'desc')
+            ->paginate(10);
+
+        // Get cancelled appointments
+        $cancelledAppointments = $customer->appointments()
+            ->with(['service', 'staff'])
+            ->where('status', 'cancelled')
+            ->orderBy('start_datetime', 'desc')
+            ->paginate(10);
+
+        return view('customer.appointments.index', compact(
+            'upcomingAppointments',
+            'pastAppointments',
+            'cancelledAppointments'
+        ));
     }
 
     public function index()
@@ -126,16 +175,21 @@ class AppointmentController extends Controller
     public function create()
     {
         $customers = Customer::all();
-
-        // Get all staff
         $staff = Staff::with('user')->get();
-
-        // Initially show all active services
         $services = Service::where('is_active', true)->with('category')->get();
-
-        // Group services by category for better display
         $servicesByCategory = $services->groupBy('category.name');
 
+        // Check if the request is from customer or admin
+        if (request()->routeIs('customer.*')) {
+            return view('customer.appointments.create', compact(
+                'customers',
+                'services',
+                'staff',
+                'servicesByCategory'
+            ));
+        }
+
+        // Default to admin dashboard view
         return view('dashboard.appointments.create', compact(
             'customers',
             'services',
@@ -324,21 +378,55 @@ class AppointmentController extends Controller
     {
         $request->validate([
             'staff_id' => 'required|exists:staff,id',
-            'start_datetime' => 'required|date',
-            'duration_minutes' => 'required|integer|min:1',
+            'date' => 'required|date',
         ]);
 
-        $isAvailable = $this->isStaffAvailable(
-            $request->staff_id,
-            $request->start_datetime,
-            $request->duration_minutes
-        );
-
+        $staffId = $request->staff_id;
+        $selectedDate = $request->date;
+        
+        // Get salon working hours (you may need to adjust this based on your implementation)
+        $openingTime = '09:00';
+        $closingTime = '18:00';
+        $interval = 30; // minutes
+        
+        // Get existing appointments for the selected staff and date
+        $appointments = Appointment::where('staff_id', $staffId)
+            ->whereDate('start_datetime', $selectedDate)
+            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->get(['start_datetime', 'end_datetime']);
+        
+        // Generate time slots
+        $start = Carbon::parse($selectedDate . ' ' . $openingTime);
+        $end = Carbon::parse($selectedDate . ' ' . $closingTime);
+        $timeSlots = [];
+        
+        while ($start->lt($end)) {
+            $slotEnd = $start->copy()->addMinutes($interval);
+            $isAvailable = true;
+            
+            // Check if the time slot is available
+            foreach ($appointments as $appt) {
+                $apptStart = Carbon::parse($appt->start_datetime);
+                $apptEnd = Carbon::parse($appt->end_datetime);
+                
+                if ($start->lt($apptEnd) && $slotEnd->gt($apptStart)) {
+                    $isAvailable = false;
+                    break;
+                }
+            }
+            
+            if ($isAvailable) {
+                $timeSlots[] = [
+                    'time' => $start->format('H:i:s'),
+                    'formatted_time' => $start->format('g:i A')
+                ];
+            }
+            
+            $start->addMinutes($interval);
+        }
+        
         return response()->json([
-            'available' => $isAvailable,
-            'message' => $isAvailable 
-                ? 'Staff is available for this time slot.' 
-                : 'Staff is not available for this time slot.'
+            'available_times' => $timeSlots
         ]);
     }
 
@@ -355,7 +443,7 @@ class AppointmentController extends Controller
 
         $currentDateTime = now();
         $appointmentDate = $appointment->start_datetime;
-        
+
         // Prevent marking as completed before appointment date
         if ($request->status === 'completed' && $currentDateTime->lt($appointmentDate)) {
             $formattedDate = $appointmentDate->format('M j, Y g:i A');
@@ -415,5 +503,5 @@ class AppointmentController extends Controller
         return redirect()->route('dashboard.appointments.index')
             ->with('success', "Appointment has been {$request->status} successfully.");
     }
-        
+
 }

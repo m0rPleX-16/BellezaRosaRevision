@@ -12,6 +12,8 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -30,8 +32,38 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // Guest can book without login
 Route::post('/guest-book', [CustomerBookingController::class, 'store'])->name('guest.book');
 
+// Notification Routes
+Route::middleware(['auth'])->group(function () {
+    // Notification routes
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::post('/{notification}/read', [NotificationController::class, 'markAsRead'])->name('mark-as-read');
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllRead'])->name('mark-all-read');
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::get('/latest', [NotificationController::class, 'latest'])->name('latest');
+    });
+});
+
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
+
+    Route::middleware(['role:customer'])->prefix('customer')->name('customer.')->group(function () {
+
+        // Customer Dashboard    
+        Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->name('dashboard');
+        // Appointments
+        Route::prefix('appointments')->name('appointments.')->group(function () {
+            Route::get('/', [AppointmentController::class, 'customerIndex'])->name('index');
+            Route::get('/create', [AppointmentController::class, 'create'])->name('create');
+            Route::post('/', [AppointmentController::class, 'store'])->name('store');
+            Route::get('/{appointment}', [AppointmentController::class, 'show'])->name('show');
+            Route::post('/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('cancel');
+        });
+
+        Route::get('/customer/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/customer/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/customer/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    });
 
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -127,7 +159,7 @@ Route::middleware(['auth'])->group(function () {
 
 // Legacy routes (kept for backward compatibility or external links)
 Route::get('/appointments', [AppointmentController::class, 'index'])->name('dashboard.appointments.index');
+Route::get('/appointments/create', [AppointmentController::class, 'create'])->name('dashboard.appointments.create');
+Route::post('/appointments', [AppointmentController::class, 'store'])->name('dashboard.appointments.store');
 Route::get('/staff', [StaffController::class, 'index'])->name('dashboard.staff.index');
 Route::get('/reports/financial', [ReportsController::class, 'financial'])->name('dashboard.reports.financial');
-Route::post('/appointments', [AppointmentController::class, 'store'])->name('dashboard.appointments.store');
-Route::get('/appointments/create', [AppointmentController::class, 'create'])->name('dashboard.appointments.create');

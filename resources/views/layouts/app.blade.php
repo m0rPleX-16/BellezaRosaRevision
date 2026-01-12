@@ -25,46 +25,103 @@
                         style="height: 28px; margin-right: 10px;">
                     <span>Belleza Rosa</span>
                 </a>
-                <ul class="nav-links" style="display: flex; list-style: none; gap: 30px;">
-                    <li><a href="/#features">Features</a></li>
-                    <li><a href="/#services">Services</a></li>
-                    <li><a href="/#about">About</a></li>
-                    <li><a href="/#contact">Contact</a></li>
-
+                <ul class="nav-links" style="display: flex; list-style: none; gap: 30px; align-items: center;">
                     @auth
-                        @if (auth()->user()->isAdmin() || auth()->user()->isStaff())
-                            <li><a href="{{ route('dashboard.index') }}" class="btn"
-                                    style="background: #1E40AF; color: white; padding: 12px 30px; border-radius: 50px; font-weight: 600;">Dashboard</a>
+                        @if (auth()->user()->isCustomer())
+                            <li>
+                                <a href="{{ route('customer.dashboard') }}"
+                                    class="nav-link {{ request()->is('customer/dashboard*') ? 'active' : '' }}"
+                                    style="font-weight: 600; color: #1E40AF;">
+                                    <i class="fas fa-calendar-alt mr-1"></i> My Appointments
+                                </a>
                             </li>
                         @else
+                            <li><a href="/#features">Features</a></li>
+                            <li><a href="/#services">Services</a></li>
+                            <li><a href="/#about">About</a></li>
+                            <li><a href="/#contact">Contact</a></li>
+                        @endif
+                        @if (auth()->user()->isAdmin() || auth()->user()->isStaff())
                             <li>
-                                <div style="position: relative;">
-                                    <a href="{{ route('messages.index') }}"
-                                        style="display: flex; align-items: center; position: relative;">
-                                        <i class="fas fa-bell" style="font-size: 20px;"></i>
-                                        @if (auth()->user()->total_unread_count > 0)
-                                            <span class="notification-badge" id="notificationBadge"
-                                                style="position: absolute; top: -8px; right: -8px; background: #EF4444; color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                                {{ auth()->user()->total_unread_count > 9 ? '9+' : auth()->user()->total_unread_count }}
-                                            </span>
+                                <a href="{{ route('dashboard.index') }}" class="btn"
+                                    style="background: #1E40AF; color: white; padding: 12px 30px; border-radius: 50px; font-weight: 600;">
+                                    Dashboard
+                                </a>
+                            </li>
+                        @else
+                            <li class="relative">
+                                <button type="button" 
+                                    id="notificationToggle" 
+                                    class="flex items-center focus:outline-none relative"
+                                    aria-haspopup="true" 
+                                    aria-expanded="false"
+                                    data-dropdown-toggle="notificationDropdown">
+                                    <i class="fas fa-bell text-xl text-gray-600 hover:text-gray-800"></i>
+                                    @if (auth()->user()->unreadNotifications->count() > 0)
+                                        <span id="notificationBadge"
+                                            class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full 
+                                            h-5 w-5 flex items-center justify-center">
+                                            {{ auth()->user()->unreadNotifications->count() > 9 ? '9+' : auth()->user()->unreadNotifications->count() }}
+                                        </span>
+                                    @endif
+                                </button>
+                                <!-- Notification Dropdown -->
+                                <div id="notificationDropdown" 
+                                    class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-50 border border-gray-200"
+                                    style="max-height: 400px; overflow-y: auto;"
+                                    data-dropdown>
+                                    <div class="p-3 border-b border-gray-200 flex justify-between items-center">
+                                        <h3 class="font-semibold text-gray-800">Notifications</h3>
+                                        @if(auth()->user()->unreadNotifications->count() > 0)
+                                            <form id="markAllReadForm" action="{{ route('notifications.mark-all-read') }}" method="POST" class="inline">
+                                                @csrf
+                                                <button type="submit" 
+                                                    class="text-xs text-blue-600 hover:text-blue-800">
+                                                    Mark all as read
+                                                </button>
+                                            </form>
                                         @endif
-                                    </a>
+                                    </div>
+                                    <div id="notificationList">
+                                        @include('partials.notifications.list', ['notifications' => auth()->user()->notifications->take(10)])
+                                    </div>
+                                    <div class="p-3 border-t border-gray-200 text-center">
+                                        <a href="{{ route('notifications.index') }}" class="text-sm text-blue-600 hover:text-blue-800">
+                                            View all notifications
+                                        </a>
+                                    </div>
                                 </div>
                             </li>
                         @endif
-
-                        <li>
-                            <form method="POST" action="{{ route('logout') }}" style="display: inline;">
-                                @csrf
-                                <button type="submit"
-                                    style="background: none; border: none; color: inherit; cursor: pointer; font: inherit;">
-                                    <i class="fas fa-sign-out-alt"></i> Logout
-                                </button>
-                            </form>
+                        <li class="relative">
+                            <button type="button" 
+                                class="flex items-center focus:outline-none"
+                                data-dropdown-toggle="userDropdown">
+                                <span class="mr-1 text-gray-700 hover:text-gray-900">{{ auth()->user()->full_name ?? auth()->user()->name }}</span>
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </button>
+                            <div id="userDropdown" 
+                                class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
+                                data-dropdown>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit"
+                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                    </button>
+                                </form>
+                            </div>
                         </li>
                     @else
-                        <li><a href="{{ route('login') }}" class="btn"
-                                style="background: #1E40AF; color: white; padding: 12px 30px; border-radius: 50px; font-weight: 600;">Login</a>
+                        <li><a href="/#features">Features</a></li>
+                        <li><a href="/#services">Services</a></li>
+                        <li><a href="/#about">About</a></li>
+                        <li><a href="/#contact">Contact</a></li>
+                        <li>
+                            <a href="{{ route('login') }}" class="btn"
+                                style="background: #1E40AF; color: white; padding: 12px 30px; border-radius: 50px; font-weight: 600;">
+                                Login
+                            </a>
                         </li>
                     @endauth
                 </ul>

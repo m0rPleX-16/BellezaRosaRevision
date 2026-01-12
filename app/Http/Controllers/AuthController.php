@@ -36,7 +36,8 @@ class AuthController extends Controller
                 return redirect()->intended('/dashboard');
             }   
 
-            return redirect()->intended('/home');
+            // Redirect customers to their dashboard
+            return redirect()->intended('/customer/dashboard');
         }
 
         return back()->withErrors([

@@ -1,4 +1,6 @@
 import './bootstrap';
+import './dropdowns';
+import './notifications';
 
 import Alpine from 'alpinejs';
 

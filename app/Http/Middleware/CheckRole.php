@@ -11,8 +11,6 @@ class CheckRole
 {
     /**
      * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
@@ -25,15 +23,33 @@ class CheckRole
         // Check if user has any of the required roles
         foreach ($roles as $role) {
             if ($user->role === $role) {
-                // Additional staff-specific restrictions
-                if ($user->isStaff()) {
-                    return $this->handleStaffRestrictions($request, $next);
-                }
-                return $next($request);
+                // Apply role-specific restrictions
+                return $this->handleRoleRestrictions($request, $next, $user);
             }
         }
 
-        abort(403, 'Unauthorized access.');
+        // If no roles matched and user is admin, allow access
+        if ($user->isAdmin()) {
+            return $next($request);
+        }
+
+        abort(403, 'You do not have permission to access this page.');
+    }
+
+    /**
+     * Handle role-specific restrictions
+     */
+    private function handleRoleRestrictions(Request $request, Closure $next, $user)
+    {
+        if ($user->isStaff()) {
+            return $this->handleStaffRestrictions($request, $next);
+        }
+
+        if ($user->isCustomer()) {
+            return $this->handleCustomerRestrictions($request, $next, $user);
+        }
+
+        return $next($request);
     }
 
     /**
@@ -41,16 +57,47 @@ class CheckRole
      */
     private function handleStaffRestrictions(Request $request, Closure $next): Response
     {
-        $user = auth()->user();
-        $staff = $user->staff;
+        $staff = auth()->user()->staff;
         
         if (!$staff) {
             abort(403, 'Staff profile not found.');
         }
 
-        // Staff can only access their own data
+        // Apply staff filters
         $this->applyStaffFilters($request, $staff);
         
+        return $next($request);
+    }
+
+    /**
+     * Handle customer-specific restrictions
+     */
+    private function handleCustomerRestrictions(Request $request, Closure $next, $user): Response
+    {
+        // Customers can only access their own data
+        if ($request->routeIs('customer.dashboard') || 
+            $request->routeIs('appointments.*') ||
+            $request->routeIs('profile.*')) {
+            
+            // For appointment-related routes, ensure customer can only access their own appointments
+            if ($request->routeIs('appointments.*')) {
+                $this->filterCustomerAppointments($request, $user);
+            }
+            
+            return $next($request);
+        }
+
+        // Allow access to customer-specific routes
+        if ($request->routeIs('customer.*')) {
+            return $next($request);
+        }
+
+        // Deny access to admin routes
+        if (str_starts_with($request->path(), 'dashboard') && 
+            !$request->routeIs('dashboard.index')) {
+            abort(403, 'Customers do not have access to the admin dashboard.');
+        }
+
         return $next($request);
     }
 
@@ -75,7 +122,7 @@ class CheckRole
         
         // Staff cannot access certain reports
         if ($request->routeIs('dashboard.reports.*')) {
-            $allowedReports = ['appointments', 'revenue']; // Staff can see these
+            $allowedReports = ['appointments', 'revenue'];
             $currentRoute = $request->route()->getName();
             
             foreach ($allowedReports as $allowed) {
@@ -105,6 +152,36 @@ class CheckRole
             if ($appointmentId) {
                 $appointment = Appointment::findOrFail($appointmentId);
                 if ($appointment->staff_id !== $staff->id) {
+                    abort(403, 'You can only modify your own appointments.');
+                }
+            }
+        }
+    }
+
+    /**
+     * Filter appointments for customers
+     */
+    private function filterCustomerAppointments(Request $request, $user): void
+    {
+        // Ensure the customer has a customer record
+        if (!$user->customer) {
+            abort(403, 'Customer profile not found.');
+        }
+
+        // For index/show actions, customer can only see their own appointments
+        if ($request->routeIs('appointments.index') || $request->routeIs('appointments.show')) {
+            $request->merge(['customer_id' => $user->customer->id]);
+        }
+        
+        // For update/cancel actions, check if appointment belongs to customer
+        if ($request->routeIs('appointments.update') || 
+            $request->routeIs('appointments.destroy') || 
+            $request->routeIs('appointments.cancel')) {
+            
+            $appointmentId = $request->route('appointment');
+            if ($appointmentId) {
+                $appointment = Appointment::findOrFail($appointmentId);
+                if ($appointment->customer_id !== $user->customer->id) {
                     abort(403, 'You can only modify your own appointments.');
                 }
             }

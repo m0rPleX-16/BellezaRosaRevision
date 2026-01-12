@@ -17,8 +17,10 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
+        $user = $request->user()->load(['customer', 'staff']);
         return view('profile.edit', [
-            'user' => $request->user()->load('staff'),
+            'user' => $user,
+            'customer' => $user->customer
         ]);
     }
 
@@ -29,37 +31,24 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $data = $request->validated();
-
-        // Handle avatar upload
-        if ($request->hasFile('avatar')) {
-            // Delete old avatar if exists
-            if ($user->avatar) {
-                Storage::disk('public')->delete($user->avatar);
-            }
-            
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $data['avatar'] = $path;
-        }
-
+        
         // Update user data
         $user->fill($data);
-
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
         }
-
         $user->save();
-
-        // If user is staff, update staff profile if needed
-        if ($user->isStaff() && $user->staff) {
-            $staff = $user->staff;
-            // Add any staff-specific fields here if needed
-            $staff->save();
+        // Update customer data if user is a customer
+        if ($user->isCustomer() && $user->customer) {
+            $customerData = $request->only([
+                'phone',
+                'gender',
+                'birth_date',
+                'address'
+            ]);
+            $user->customer()->update($customerData);
         }
-
-        return redirect()->route('profile.edit')
-            ->with('status', 'profile-updated')
-            ->with('success', 'Profile updated successfully!');
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**
