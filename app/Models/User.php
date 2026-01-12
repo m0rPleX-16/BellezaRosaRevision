@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Customer;     
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -76,7 +77,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function customer()
     {
-        return $this->hasOne(Customer::class);
+        return $this->hasOne(Customer::class, 'user_id');
     }
 
     public function isAdmin(): bool
@@ -92,5 +93,24 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isCustomer(): bool
     {
         return $this->role === 'customer';
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            if ($user->role === 'customer' && !$user->customer) {
+                Customer::create([
+                    'user_id' => $user->id,
+                    'full_name' => $user->full_name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'phone' => $user->phone ?? '0000000000',
+                    'gender' => 'other',
+                    'birth_date' => now()->subYears(18)->format('Y-m-d'),
+                    'total_visits' => 0,
+                    'total_spent' => 0,
+                ]);
+            }
+        });
     }
 }

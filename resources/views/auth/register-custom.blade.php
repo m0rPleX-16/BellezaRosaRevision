@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -177,18 +178,21 @@
             position: relative;
         }
 
-       .input-with-icon i {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--gray);
-    font-size: 18px;           /* consistent icon size */
-    pointer-events: none;      /* icon never blocks typing/cursor */
-    z-index: 10;
-}
+        .input-with-icon i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+            font-size: 18px;
+            /* consistent icon size */
+            pointer-events: none;
+            /* icon never blocks typing/cursor */
+            z-index: 10;
+        }
 
-        input, select {
+        input,
+        select {
             width: 100%;
             padding: 14px 14px 14px 45px;
             border: 1px solid #D1D5DB;
@@ -197,15 +201,20 @@
             transition: 0.3s;
             font-family: 'Poppins', sans-serif;
         }
-/* This is the magic line – forces enough left padding */
-.input-with-icon input,
-.input-with-icon select {
-    padding-left: 56px !important;   /* was 45px → now 56px */
-    height: 56px;                    /* optional: makes it look even cleaner */
-}
-        input:focus, select:focus {
+
+        /* This is the magic line – forces enough left padding */
+        .input-with-icon input,
+        .input-with-icon select {
+            padding-left: 56px !important;
+            /* was 45px → now 56px */
+            height: 56px;
+            /* optional: makes it look even cleaner */
+        }
+
+        input:focus,
+        select:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
             outline: none;
         }
 
@@ -230,7 +239,7 @@
         .btn-primary:hover {
             background: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(30,64,175,0.2);
+            box-shadow: 0 8px 20px rgba(30, 64, 175, 0.2);
         }
 
         .alert {
@@ -261,6 +270,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Brand Section -->
@@ -269,13 +279,15 @@
                 <a href="{{ route('landing') }}" class="logo-link">
 
                     <div class="logo">
-                    <img src="{{ asset('images/logo.png') }}" alt="Belleza Rosa Logo" style="height: 28px; margin-right: 10px;">
-                    <span>Belleza Rosa</span>
+                        <img src="{{ asset('images/logo.png') }}" alt="Belleza Rosa Logo"
+                            style="height: 28px; margin-right: 10px;">
+                        <span>Belleza Rosa</span>
                     </div>
                 </a>
-                
+
                 <h1>Join Our Salon</h1>
-                <p>Create your account to access premium salon management features and streamline your business operations.</p>
+                <p>Create your account to access premium salon management features and streamline your business
+                    operations.</p>
 
                 <div class="features">
                     <div class="feature">
@@ -321,62 +333,104 @@
                         </div>
                     @endif
 
+                    <!-- Full Name -->
                     <div class="form-group">
                         <label for="full_name">Full Name</label>
                         <div class="input-with-icon">
                             <i class="fas fa-user"></i>
-                            <input type="text" id="full_name" name="full_name" value="{{ old('full_name') }}" placeholder="Enter your full name" required>
+                            <input type="text" id="full_name" name="full_name" value="{{ old('full_name') }}"
+                                placeholder="Enter your full name" required>
                         </div>
                     </div>
 
+                    <!-- Username -->
                     <div class="form-group">
                         <label for="username">Username</label>
                         <div class="input-with-icon">
                             <i class="fas fa-user-circle"></i>
-                            <input type="text" id="username" name="username" value="{{ old('username') }}" placeholder="Choose a username" required>
+                            <input type="text" id="username" name="username" value="{{ old('username') }}"
+                                placeholder="Choose a username" required>
                         </div>
                     </div>
 
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="email" name="email" value="{{ old('email') }}"
+                                placeholder="Enter your email" required>
+                        </div>
+                    </div>
+
+                    <!-- Phone -->
                     <div class="form-group">
                         <label for="phone">Phone Number</label>
                         <div class="input-with-icon">
                             <i class="fas fa-phone"></i>
-                            <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" placeholder="Enter your phone number" required>
+                            <input type="tel" id="phone" name="phone" value="{{ old('phone') }}"
+                                placeholder="Enter your phone number" required>
                         </div>
                     </div>
 
+                    <!-- Gender -->
                     <div class="form-group">
-                        <label for="email">Email (Optional)</label>
+                        <label for="gender">Gender</label>
                         <div class="input-with-icon">
-                            <i class="fas fa-envelope"></i>
-                            <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="Enter your email">
+                            <i class="fas fa-venus-mars"></i>
+                            <select id="gender" name="gender" required>
+                                <option value="" disabled selected>Select Gender</option>
+                                <option value="male" {{ old('gender') === 'male' ? 'selected' : '' }}>Male</option>
+                                <option value="female" {{ old('gender') === 'female' ? 'selected' : '' }}>Female
+                                </option>
+                                <option value="other" {{ old('gender') === 'other' ? 'selected' : '' }}>Other</option>
+                                <option value="prefer_not_to_say"
+                                    {{ old('gender') === 'prefer_not_to_say' ? 'selected' : '' }}>Prefer not to say
+                                </option>
+                            </select>
                         </div>
                     </div>
 
+                    <!-- Birth Date -->
+                    <div class="form-group">
+                        <label for="birth_date">Date of Birth</label>
+                        <div class="input-with-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                            <input type="date" id="birth_date" name="birth_date" value="{{ old('birth_date') }}"
+                                max="{{ \Carbon\Carbon::today()->format('Y-m-d') }}" required>
+                        </div>
+                    </div>
+
+                    <!-- Password -->
                     <div class="form-group">
                         <label for="password">Password</label>
                         <div class="input-with-icon">
                             <i class="fas fa-lock"></i>
-                            <input type="password" id="password" name="password" placeholder="Create a password" required>
+                            <input type="password" id="password" name="password" placeholder="Create a password"
+                                required>
                         </div>
                     </div>
 
+                    <!-- Confirm Password -->
                     <div class="form-group">
                         <label for="password_confirmation">Confirm Password</label>
                         <div class="input-with-icon">
                             <i class="fas fa-lock"></i>
-                            <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Confirm your password" required>
+                            <input type="password" id="password_confirmation" name="password_confirmation"
+                                placeholder="Confirm your password" required>
                         </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary">Create Account</button>
 
                     <div class="form-footer" style="text-align: center; margin-top: 30px; color: var(--gray);">
-                        <p>Already have an account? <a href="{{ route('login') }}" style="color: var(--primary); font-weight: 500;">Sign In</a></p>
+                        <p>Already have an account? <a href="{{ route('login') }}"
+                                style="color: var(--primary); font-weight: 500;">Sign In</a></p>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </body>
+
 </html>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Notifications\PaymentStatusUpdated;
 use App\Models\Appointment;
 use App\Models\Customer;
 use App\Models\Commission;
@@ -16,13 +17,13 @@ class PaymentController extends Controller
     {
         // Staff can only view payments for their own appointments
         $query = Payment::with(['appointment.service', 'appointment.staff', 'customer']);
-        
+
         if (auth()->user()->isStaff() && auth()->user()->staff) {
-            $query->whereHas('appointment', function($q) {
+            $query->whereHas('appointment', function ($q) {
                 $q->where('staff_id', auth()->user()->staff->id);
             });
         }
-        
+
         $payments = $query->orderBy('created_at', 'desc')->paginate(20);
 
         return view('dashboard.payments.index', compact('payments'));
@@ -34,151 +35,250 @@ class PaymentController extends Controller
         return view('dashboard.payments.show', compact('payment'));
     }
 
-    public function createForAppointment(Appointment $appointment)
+    public function createForAppointment($appointment)
     {
+        // If it's not an instance of Appointment, try to find it
+        if (!$appointment instanceof Appointment) {
+            $appointment = Appointment::findOrFail($appointment);
+        }
+
         // Payment can only be created after service is completed
         if ($appointment->status !== 'completed') {
             return redirect()->route('dashboard.appointments.index')
                 ->with('error', 'Payment can only be processed after the service is completed.');
         }
 
+        // Check if payment already exists
+        if ($appointment->payment) {
+            return redirect()->route('dashboard.payments.show', $appointment->payment)
+                ->with('info', 'A payment already exists for this appointment.');
+        }
+
         return view('dashboard.payments.create', compact('appointment'));
     }
 
-    public function store(Request $request)
-{
-    $request->validate([
-        'appointment_id' => 'required|exists:appointments,id',
-        'method' => 'required|in:cash,gcash,bank_transfer,online',
-        'amount' => 'required|numeric|min:0',
-        'reference_number' => 'nullable|string|max:100',
-        'payment_details' => 'nullable|array',
-        'notes' => 'nullable|string',
-        'status' => 'required|in:pending,paid'
-    ]);
+    /**
+     * Validate payment data alignment
+     */
+    protected function validatePaymentData($appointment, $requestData)
+    {
+        $currentDateTime = now();
+        $appointmentDate = $appointment->start_datetime;
 
-    $appointment = Appointment::findOrFail($request->appointment_id);
+        // Check if trying to mark as paid before appointment date
+        if (isset($requestData['status']) && $requestData['status'] === 'paid' && $currentDateTime->lt($appointmentDate)) {
+            $formattedDate = $appointmentDate->format('M j, Y g:i A');
+            return [
+                'success' => false,
+                'message' => "Cannot mark payment as paid before the appointment date ($formattedDate)."
+            ];
+        }
 
-    // Payment can only be created after service is completed
-    if ($appointment->status !== 'completed') {
-        return back()->withErrors([
-            'appointment_id' => 'Payment can only be processed after the service is completed. Please mark the appointment as completed first.'
-        ]);
+        // Check if payment amount matches appointment total
+        if (isset($requestData['amount']) && $appointment->total_amount != $requestData['amount']) {
+            return [
+                'success' => false,
+                'message' => 'Payment amount does not match the appointment total.'
+            ];
+        }
+
+        // Check if appointment is assigned to a staff member
+        if (!$appointment->staff_id) {
+            return [
+                'success' => false,
+                'message' => 'Appointment must be assigned to a staff member before payment.'
+            ];
+        }
+
+        // Check if appointment has services
+        if (!$appointment->service_id) {
+            return [
+                'success' => false,
+                'message' => 'Appointment must have a service assigned before payment.'
+            ];
+        }
+
+        return ['success' => true];
     }
 
-    // Check if payment already exists
-    $existingPayment = Payment::where('appointment_id', $appointment->id)->first();
-    
-    DB::transaction(function () use ($request, $appointment, $existingPayment) {
-        $paymentData = [
-            'amount' => $request->amount,
-            'method' => $request->method(),
-            'reference_number' => $request->reference_number,
-            'payment_details' => $request->payment_details,
-            'status' => $request->status,
-            'notes' => $request->notes,
-        ];
-
-        // Set paid_at when status is paid
-        if ($request->status === 'paid') {
-            $paymentData['paid_at'] = now();
-        }
-
-        if ($existingPayment) {
-            // Update existing payment
-            $existingPayment->update($paymentData);
-            $payment = $existingPayment;
-        } else {
-            // Create new payment
-            $paymentData['appointment_id'] = $appointment->id;
-            $paymentData['customer_id'] = $appointment->customer_id;
-            $payment = Payment::create($paymentData);
-        }
-
-        // Update appointment payment method
-        $appointment->update([
-            'payment_method' => $request->method()
+    public function store(Request $request)
+    {
+        $request->validate([
+            'appointment_id' => 'required|exists:appointments,id',
+            'method' => 'required|in:cash,gcash,bank_transfer,online',
+            'amount' => 'required|numeric|min:0',
+            'reference_number' => 'nullable|string|max:100',
+            'payment_details' => 'nullable|array',
+            'notes' => 'nullable|string',
+            'status' => 'required|in:pending,paid'
         ]);
-        
-        // If payment is marked as paid, ensure appointment stays completed and create commission
-        if ($request->status === 'paid') {
-            if ($appointment->status !== 'completed') {
-                $appointment->update(['status' => 'completed']);
-            }
-            
-            // Create commission for staff when payment is paid
-            $this->createCommission($appointment, $payment);
-        }
-    });
 
-    return redirect()->route('dashboard.payments.index')
-        ->with('success', 'Payment recorded successfully!');
-}
+        $appointment = Appointment::with(['payment', 'service', 'staff'])->findOrFail($request->appointment_id);
+
+        // Payment can only be created after service is completed
+        if ($appointment->status !== 'completed') {
+            return back()->with('error', 'Payment can only be processed after the service is completed.');
+        }
+
+        // Check if payment already exists and is already paid
+        if ($appointment->payment && $appointment->payment->isPaid()) {
+            return back()->with('error', 'This appointment already has a paid payment.');
+        }
+
+        // Validate payment data alignment
+        $validation = $this->validatePaymentData($appointment, $request->all());
+        if (!$validation['success']) {
+            return back()->with('error', $validation['message']);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $paymentData = [
+                'appointment_id' => $appointment->id,
+                'customer_id' => $appointment->customer_id,
+                'amount' => $request->amount,
+                'method' => $request->method(),
+                'reference_number' => $request->reference_number,
+                'payment_details' => $request->payment_details ?? [],
+                'status' => $request->status,
+                'notes' => $request->notes,
+                'paid_at' => $request->status === 'paid' ? now() : null
+            ];
+
+            if ($appointment->payment) {
+                // Update existing payment
+                $payment = $appointment->payment;
+                $payment->update($paymentData);
+            } else {
+                // Create new payment
+                $payment = Payment::create($paymentData);
+            }
+
+            // Update appointment payment method
+            $appointment->update([
+                'payment_method' => $request->method()
+            ]);
+
+            // If payment is marked as paid, create commission
+            if ($request->status === 'paid') {
+                $this->createCommission($appointment, $payment);
+
+                // Log the payment
+                activity()
+                    ->performedOn($payment)
+                    ->causedBy(auth()->user())
+                    ->withProperties([
+                        'amount' => $payment->amount,
+                        'method' => $payment->method,
+                        'reference' => $payment->reference_number
+                    ])
+                    ->log('Payment recorded');
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment recorded successfully!',
+                'payment_id' => $payment->id
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Payment recording failed: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to record payment. Please try again.'
+            ], 500);
+        }
+    }
 
     public function updateStatus(Request $request, Payment $payment)
-{
-    $request->validate([
-        'status' => 'required|in:pending,paid,failed,refunded',
-        'reference_number' => 'nullable|string|max:100',
-        'cancellation_reason' => 'required_if:status,failed,refunded|nullable|string|max:255'
-    ]);
+    {
+        $request->validate([
+            'status' => 'required|in:pending,paid,failed,refunded',
+            'reference_number' => 'nullable|string|max:100',
+            'cancellation_reason' => 'required_if:status,failed,refunded|nullable|string|max:255'
+        ]);
 
-    DB::transaction(function () use ($request, $payment) {
-        $oldStatus = $payment->status;
-        $newStatus = $request->status;
-        
-        // Update payment status properly
-        $updateData = [
-            'status' => $newStatus,
-            'reference_number' => $request->reference_number ?? $payment->reference_number,
-        ];
-        
-        // Set paid_at when status changes to paid
-        if ($newStatus === 'paid' && $oldStatus !== 'paid') {
-            $updateData['paid_at'] = now();
-        } elseif ($newStatus !== 'paid') {
-            // Clear paid_at if status changes from paid to something else
-            $updateData['paid_at'] = null;
+        $appointment = $payment->appointment->load('service', 'staff');
+
+        // If payment is being marked as paid, ensure it's not before the appointment date
+        if ($request->status === 'paid' && now()->lt($appointment->start_datetime)) {
+            $formattedDate = $appointment->start_datetime->format('M j, Y g:i A');
+            return back()->with('error', "Cannot mark payment as paid before the appointment date ($formattedDate).");
         }
-        
-        // Update notes if provided
-        if ($request->notes) {
-            $updateData['notes'] = $request->notes;
+
+        // Only allow updating payment status to paid if the appointment is completed
+        if ($request->status === 'paid' && $appointment->status !== 'completed') {
+            return back()->with('error', 'Cannot mark payment as paid because the appointment is not yet completed.');
         }
-        
-        $payment->update($updateData);
-        
-        // Update appointment status based on payment status
-        $appointment = $payment->appointment;
-        if ($newStatus === 'paid') {
-            // Payment is paid - mark appointment as completed if service was done
-            if (in_array($appointment->status, ['in_progress', 'completed'])) {
-                $appointment->update(['status' => 'completed']);
+
+        DB::transaction(function () use ($request, $payment) {
+            $oldStatus = $payment->status;
+            $newStatus = $request->status;
+
+            // Update payment status properly
+            $updateData = [
+                'status' => $newStatus,
+                'reference_number' => $request->reference_number ?? $payment->reference_number,
+            ];
+
+            // Set paid_at when status changes to paid
+            if ($newStatus === 'paid' && $oldStatus !== 'paid') {
+                $updateData['paid_at'] = now();
+            } elseif ($newStatus !== 'paid') {
+                // Clear paid_at if status changes from paid to something else
+                $updateData['paid_at'] = null;
             }
+
+            // Update notes if provided
+            if ($request->notes) {
+                $updateData['notes'] = $request->notes;
+            }
+
+            $oldStatus = $payment->status;
+            $payment->update($updateData);
             
-            // Create commission when payment is marked as paid
-            $this->createCommission($appointment, $payment);
-        } elseif ($newStatus === 'failed') {
-            // Payment failed - add reason to notes
-            if ($request->cancellation_reason) {
-                $currentNotes = $appointment->notes ? $appointment->notes . "\n" : '';
-                $appointment->update([
-                    'notes' => $currentNotes . "Payment failed: " . $request->cancellation_reason
-                ]);
+            // If status changed, notify the customer
+            if ($oldStatus !== $newStatus) {
+                $message = "Your payment status has been updated to: " . ucfirst($newStatus);
+                $payment->customer->notify(new PaymentStatusUpdated($payment, $message));
             }
-        } elseif ($newStatus === 'refunded') {
-            // Payment refunded - requires reason
-            if ($request->cancellation_reason) {
-                $currentNotes = $appointment->notes ? $appointment->notes . "\n" : '';
-                $appointment->update([
-                    'notes' => $currentNotes . "Payment refunded: " . $request->cancellation_reason
-                ]);
-            }
-        }
-    });
 
-    return back()->with('success', 'Payment status updated successfully!');
-}
+            // Update appointment status based on payment status
+            $appointment = $payment->appointment;
+            if ($newStatus === 'paid') {
+                // Payment is paid - mark appointment as completed if service was done
+                if (in_array($appointment->status, ['in_progress', 'completed'])) {
+                    $appointment->update(['status' => 'completed']);
+                }
+
+                // Create commission when payment is marked as paid
+                $this->createCommission($appointment, $payment);
+            } elseif ($newStatus === 'failed') {
+                // Payment failed - add reason to notes
+                if ($request->cancellation_reason) {
+                    $currentNotes = $appointment->notes ? $appointment->notes . "\n" : '';
+                    $appointment->update([
+                        'notes' => $currentNotes . "Payment failed: " . $request->cancellation_reason
+                    ]);
+                }
+            } elseif ($newStatus === 'refunded') {
+                // Payment refunded - requires reason
+                if ($request->cancellation_reason) {
+                    $currentNotes = $appointment->notes ? $appointment->notes . "\n" : '';
+                    $appointment->update([
+                        'notes' => $currentNotes . "Payment refunded: " . $request->cancellation_reason
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Payment status updated successfully!');
+    }
 
     public function edit(Payment $payment)
     {
@@ -189,35 +289,60 @@ class PaymentController extends Controller
     public function update(Request $request, Payment $payment)
     {
         $request->validate([
-            'method' => 'required|in:cash,gcash,bank_transfer',
+            'method' => 'required|in:cash,gcash,bank_transfer,online',
             'amount' => 'required|numeric|min:0',
             'reference_number' => 'nullable|string|max:100',
-            'status' => 'required|in:pending,paid,failed,refunded',
+            'payment_details' => 'nullable|array',
+            'status' => 'required|in:pending,paid',
             'notes' => 'nullable|string'
         ]);
 
-        $oldStatus = $payment->status;
-        $newStatus = $request->status;
+        $appointment = $payment->appointment->load('service', 'staff');
 
-        DB::transaction(function () use ($request, $payment, $oldStatus, $newStatus) {
+        // Validate payment data alignment
+        $validation = $this->validatePaymentData($appointment, $request->all());
+        if (!$validation['success']) {
+            return back()->with('error', $validation['message']);
+        }
+
+        // If payment is being marked as paid, ensure it's not before the appointment date
+        if ($request->status === 'paid' && now()->lt($appointment->start_datetime)) {
+            $formattedDate = $appointment->start_datetime->format('M j, Y g:i A');
+            return back()->with('error', "Cannot mark payment as paid before the appointment date ($formattedDate).");
+        }
+
+        // Only allow updating payment status to paid if the appointment is completed
+        if ($request->status === 'paid' && $appointment->status !== 'completed') {
+            return back()->with('error', 'Cannot mark payment as paid because the appointment is not yet completed.');
+        }
+
+        // Start database transaction
+        DB::beginTransaction();
+
+        try {
             $payment->update([
-                'method' => $request->method(),
+                'method' => $request->input('method'),
                 'amount' => $request->amount,
                 'reference_number' => $request->reference_number,
-                'status' => $newStatus,
-                'paid_at' => $newStatus === 'paid' ? now() : null,
-                'notes' => $request->notes
+                'payment_details' => $request->payment_details ?? [],
+                'status' => $request->status,
+                'notes' => $request->notes,
+                'paid_at' => $request->status === 'paid' ? now() : null
             ]);
 
-            // Create commission when payment is marked as paid
-            if ($newStatus === 'paid' && $oldStatus !== 'paid') {
-                $appointment = $payment->appointment;
-                if ($appointment && $appointment->status !== 'completed') {
+            // If payment is marked as paid, ensure commission is created
+            if ($request->status === 'paid') {
+                if ($appointment->status === 'completed') {
                     $appointment->update(['status' => 'completed']);
+                    $this->createCommission($appointment, $payment);
                 }
-                $this->createCommission($appointment, $payment);
             }
-        });
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Failed to update payment: ' . $e->getMessage());
+        }
 
         return redirect()->route('dashboard.payments.show', $payment)
             ->with('success', 'Payment updated successfully!');

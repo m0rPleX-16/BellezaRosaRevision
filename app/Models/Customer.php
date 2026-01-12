@@ -9,6 +9,7 @@ class Customer extends Model
     protected $fillable = [
         'user_id',
         'full_name',
+        'username',
         'phone',
         'email',
         'gender',
@@ -17,6 +18,13 @@ class Customer extends Model
         'total_visits',
         'total_spent',
         'last_visit'
+    ];
+
+    protected $casts = [
+        'birth_date' => 'date',
+        'last_visit' => 'datetime',
+        'total_visits' => 'integer',
+        'total_spent' => 'decimal:2',
     ];
 
     public function user()

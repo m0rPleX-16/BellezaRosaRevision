@@ -3,12 +3,9 @@
 @section('title', 'Appointments - Belleza Rosa')
 
 @section('content')
-    <div class="space-y-6"
-         data-appointments-store="{{ route('dashboard.appointments.store') }}"
-         data-opening-time="{{ substr($openingTime, 0, 5) }}"
-         data-closing-time="{{ substr($closingTime, 0, 5) }}"
-         data-max-days-ahead="{{ $maxDaysAhead }}"
-         data-slot-interval="{{ $slotInterval }}">
+    <div class="space-y-6" data-appointments-store="{{ route('dashboard.appointments.store') }}"
+        data-opening-time="{{ substr($openingTime, 0, 5) }}" data-closing-time="{{ substr($closingTime, 0, 5) }}"
+        data-max-days-ahead="{{ $maxDaysAhead }}" data-slot-interval="{{ $slotInterval }}">
         <!-- Header -->
         <div class="flex justify-between items-center">
             <h1 class="text-3xl font-bold text-gray-900">Appointments</h1>
@@ -164,8 +161,9 @@
                                 {{ $appointment->status == 'no_show' ? 'text-orange-600' : '' }}">
                                         {{ str_replace('_', ' ', ucfirst($appointment->status)) }}
                                     </span>
-                                    @if($appointment->cancellation_reason)
-                                        <br><span class="text-xs text-gray-500 italic" title="{{ $appointment->cancellation_reason }}">
+                                    @if ($appointment->cancellation_reason)
+                                        <br><span class="text-xs text-gray-500 italic"
+                                            title="{{ $appointment->cancellation_reason }}">
                                             Reason: {{ Str::limit($appointment->cancellation_reason, 30) }}
                                         </span>
                                     @endif
@@ -179,8 +177,7 @@
                                         <form action="{{ route('dashboard.appointments.status', $appointment) }}"
                                             method="POST" class="inline" id="statusForm{{ $appointment->id }}">
                                             @csrf
-                                            <select name="status" 
-                                                data-old-value="{{ $appointment->status }}"
+                                            <select name="status" data-old-value="{{ $appointment->status }}"
                                                 data-appointment-id="{{ $appointment->id }}"
                                                 onchange="confirmStatusChange(this)"
                                                 class="text-xs font-semibold rounded-lg px-3 py-1 bg-blue-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-300">
@@ -224,27 +221,21 @@
                                             </a>
                                         @endif
 
-                                        <!-- Record Payment (only for completed or in-progress appointments) -->
-                                        @if(in_array($appointment->status, ['completed', 'in_progress']))
-                                            <a href="{{ route('dashboard.payments.create', $appointment) }}"
-                                                class="text-green-600 hover:text-green-800 transition" title="Record Payment">
-                                                <i class="fas fa-money-bill-wave"></i>
-                                            </a>
-                                        @endif
-
-                                        <!-- View Payment (if exists) -->
-                                        @if($appointment->status === 'completed')
-                                            @if ($appointment->payment()->exists())
+                                        <!-- Payment Actions -->
+                                        @if ($appointment->status === 'completed')
+                                            @if ($appointment->payment && $appointment->payment->isPaid())
+                                                <!-- View Payment Details -->
                                                 <a href="{{ route('dashboard.payments.show', $appointment->payment) }}"
                                                     class="text-indigo-600 hover:text-indigo-800 transition"
                                                     title="View Payment Details">
                                                     <i class="fas fa-credit-card"></i>
                                                 </a>
                                             @else
-                                                <a href="{{ route('dashboard.payments.create', ['appointment_id' => $appointment->id]) }}"
+                                                <!-- Create New Payment -->
+                                                <a href="{{ route('dashboard.payments.create', ['appointment' => $appointment->id]) }}"
                                                     class="text-green-600 hover:text-green-800 transition"
-                                                    title="Add Payment">
-                                                    <i class="fas fa-plus-circle"></i>
+                                                    title="Record Payment">
+                                                    <i class="fas fa-money-bill-wave"></i>
                                                 </a>
                                             @endif
                                         @endif
@@ -305,9 +296,9 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                                 <option value="">Select Customer</option>
                                 @foreach ($customers ?? [] as $customer)
-                                    @if(isset($customer) && is_object($customer))
-                                    <option value="{{ $customer->id ?? '' }}">{{ $customer->full_name ?? '' }} -
-                                        {{ $customer->phone ?? '' }}</option>
+                                    @if (isset($customer) && is_object($customer))
+                                        <option value="{{ $customer->id ?? '' }}">{{ $customer->full_name ?? '' }} -
+                                            {{ $customer->phone ?? '' }}</option>
                                     @endif
                                 @endforeach
                             </select>
@@ -318,9 +309,9 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                                 <option value="">Select Service</option>
                                 @foreach ($services ?? [] as $service)
-                                    @if(isset($service) && is_object($service))
-                                    <option value="{{ $service->id ?? '' }}">{{ $service->name ?? '' }} -
-                                        ₱{{ number_format($service->price_regular ?? 0, 2) }}</option>
+                                    @if (isset($service) && is_object($service))
+                                        <option value="{{ $service->id ?? '' }}">{{ $service->name ?? '' }} -
+                                            ₱{{ number_format($service->price_regular ?? 0, 2) }}</option>
                                     @endif
                                 @endforeach
                             </select>
@@ -332,7 +323,8 @@
                                 <option value="">Select Staff</option>
                                 @foreach ($staff ?? [] as $staffMember)
                                     <option value="{{ $staffMember->id }}">{{ $staffMember->user->full_name }}
-                                        ({{ ucfirst($staffMember->specialty) }})</option>
+                                        ({{ ucfirst($staffMember->specialty) }})
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -371,67 +363,190 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // Confirmation for status change
+        // Status change configurations
+        const statusConfig = {
+            'scheduled': {
+                title: 'Mark as Scheduled',
+                message: 'This will mark the appointment as scheduled. The customer will be notified of their appointment details.',
+                icon: 'info',
+                confirmText: 'Yes, mark as scheduled',
+                confirmColor: '#3b82f6',
+                showCancel: true
+            },
+            'confirmed': {
+                title: 'Confirm Appointment',
+                message: 'This will confirm the appointment. The customer will receive a confirmation notification.',
+                icon: 'success',
+                confirmText: 'Yes, confirm appointment',
+                confirmColor: '#10b981',
+                showCancel: true
+            },
+            'in_progress': {
+                title: 'Start Service',
+                message: 'Mark this appointment as in progress? This will notify staff to prepare for the service.',
+                icon: 'info',
+                confirmText: 'Yes, start service',
+                confirmColor: '#f59e0b',
+                showCancel: true
+            },
+            'completed': {
+                title: 'Complete Appointment',
+                message: 'Mark this appointment as completed? This will finalize the service and allow for payment processing.',
+                icon: 'question',
+                confirmText: 'Yes, complete appointment',
+                confirmColor: '#10b981',
+                showCancel: true
+            },
+            'cancelled': {
+                title: 'Cancel Appointment',
+                message: 'Are you sure you want to cancel this appointment? This action requires a cancellation reason.',
+                icon: 'warning',
+                confirmText: 'Yes, cancel appointment',
+                confirmColor: '#dc2626',
+                showCancel: true,
+                requiresReason: true
+            },
+            'failed': {
+                title: 'Mark as Failed',
+                message: 'Mark this appointment as failed? Please ensure you have notified the customer and documented the reason.',
+                icon: 'error',
+                confirmText: 'Yes, mark as failed',
+                confirmColor: '#dc2626',
+                showCancel: true,
+                requiresReason: true
+            },
+            'no_show': {
+                title: 'Mark as No Show',
+                message: 'Mark this appointment as a no-show? This will be recorded in the appointment history.',
+                icon: 'warning',
+                confirmText: 'Yes, mark as no-show',
+                confirmColor: '#f59e0b',
+                showCancel: true
+            }
+        };
+
+        // Format status for display
+        function formatStatus(status) {
+            if (!status) return '';
+            return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Handle status change with confirmation
         async function confirmStatusChange(selectElement) {
             const newStatus = selectElement.value;
             const oldStatus = selectElement.dataset.oldValue;
             const appointmentId = selectElement.dataset.appointmentId;
-            
-            // Get status labels
-            const statusLabels = {
-                'scheduled': 'Scheduled',
-                'confirmed': 'Confirmed',
-                'in_progress': 'In Progress',
-                'completed': 'Completed',
-                'cancelled': 'Cancelled',
-                'failed': 'Failed',
-                'no_show': 'No Show'
-            };
+            const form = document.getElementById('statusForm' + appointmentId);
 
-            // Critical status changes require confirmation
-            if (['cancelled', 'failed', 'no_show', 'completed'].includes(newStatus)) {
-                const result = await Swal.fire({
-                    title: 'Confirm Status Change',
-                    html: `Are you sure you want to change this appointment status from <strong>${statusLabels[oldStatus]}</strong> to <strong>${statusLabels[newStatus]}</strong>?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: newStatus === 'completed' ? '#10b981' : '#dc2626',
-                    cancelButtonColor: '#6b7280',
-                    confirmButtonText: 'Yes, change it',
-                    cancelButtonText: 'Cancel'
-                });
-
-                if (!result.isConfirmed) {
-                    // Reset to old value
-                    selectElement.value = oldStatus;
-                    return false;
-                }
+            // If no change, do nothing
+            if (newStatus === oldStatus) {
+                return;
             }
 
-            // Submit the form
-            document.getElementById('statusForm' + appointmentId).submit();
+            // Get configuration for this status
+            const config = statusConfig[newStatus] || {
+                title: 'Change Status',
+                message: `Are you sure you want to change the status to ${formatStatus(newStatus)}?`,
+                icon: 'question',
+                confirmText: 'Yes, change status',
+                confirmColor: '#3b82f6',
+                showCancel: true
+            };
+
+            // Show confirmation dialog
+            const result = await Swal.fire({
+                title: config.title,
+                text: config.message,
+                icon: config.icon,
+                showCancelButton: config.showCancel,
+                confirmButtonColor: config.confirmColor,
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: config.confirmText,
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            });
+
+            if (result.isConfirmed) {
+                // If this status requires a reason, show another input
+                if (config.requiresReason) {
+                    const {
+                        value: reason
+                    } = await Swal.fire({
+                        title: 'Reason Required',
+                        input: 'text',
+                        inputLabel: 'Please provide a reason for ' + newStatus.replace('_', ' ').toLowerCase(),
+                        inputPlaceholder: 'Enter the reason...',
+                        inputAttributes: {
+                            'aria-label': 'Enter the reason',
+                            required: 'required'
+                        },
+                        showCancelButton: true,
+                        inputValidator: (value) => {
+                            if (!value) {
+                                return 'You need to provide a reason!';
+                            }
+                        }
+                    });
+
+                    if (reason) {
+                        // Add reason to form and submit
+                        let reasonInput = form.querySelector('input[name="cancellation_reason"]');
+                        if (!reasonInput) {
+                            reasonInput = document.createElement('input');
+                            reasonInput.type = 'hidden';
+                            reasonInput.name = 'cancellation_reason';
+                            form.appendChild(reasonInput);
+                        }
+                        reasonInput.value = reason;
+                        form.submit();
+                    } else {
+                        // Reset to old value if no reason provided
+                        selectElement.value = oldStatus;
+                        return false;
+                    }
+                } else {
+                    // Submit the form for status changes that don't require a reason
+                    form.submit();
+                }
+            } else {
+                // Reset to old value if not confirmed
+                selectElement.value = oldStatus;
+                return false;
+            }
         }
 
         // Confirmation for cancel appointment
         function confirmCancelAppointment(event) {
             event.preventDefault();
             const url = event.target.closest('a').href;
-            
+
             Swal.fire({
-                title: 'Cancel Appointment?',
-                text: 'You will be redirected to the cancellation form where you must provide a reason.',
-                icon: 'question',
+                title: 'Cancel Appointment',
+                html: 'You are about to cancel this appointment. This action requires a reason and cannot be undone.<br><br>You will be redirected to the cancellation form.',
+                icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc2626',
                 cancelButtonColor: '#6b7280',
-                confirmButtonText: 'Yes, cancel it',
-                cancelButtonText: 'No, keep it'
+                confirmButtonText: 'Continue to Cancellation',
+                cancelButtonText: 'Keep Appointment',
+                reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Show loading state before redirect
+                    Swal.fire({
+                        title: 'Preparing Cancellation',
+                        text: 'Please wait...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Redirect to cancellation form
                     window.location.href = url;
                 }
             });
-            
+
             return false;
         }
     </script>
@@ -553,7 +668,8 @@
                         const openingTime = contentDiv2 ? contentDiv2.dataset.openingTime : '09:00';
                         const closingTime = contentDiv2 ? contentDiv2.dataset.closingTime : '20:00';
                         alert(
-                        `Please select a time within business hours: ${openingTime} - ${closingTime}`);
+                            `Please select a time within business hours: ${openingTime} - ${closingTime}`
+                        );
                         dateTimeInput.focus();
                     }
                 });

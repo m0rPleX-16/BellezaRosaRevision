@@ -135,7 +135,25 @@
     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
         @csrf
     </form>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-4">
+        @if(session('success'))
+            <x-toast type="success" :message="session('success')" />
+        @endif
+        
+        @if(session('error'))
+            <x-toast type="error" :message="session('error')" />
+        @endif
+        
+        @if($errors->any())
+            @foreach($errors->all() as $error)
+                <x-toast type="error" :message="$error" />
+            @endforeach
+        @endif
+    </div>
 </body>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // Handle navigation clicks

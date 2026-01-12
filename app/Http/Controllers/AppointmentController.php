@@ -353,6 +353,25 @@ class AppointmentController extends Controller
             'status' => 'required|in:scheduled,confirmed,in_progress,completed,cancelled,no_show,failed'
         ]);
 
+        $currentDateTime = now();
+        $appointmentDate = $appointment->start_datetime;
+        
+        // Prevent marking as completed before appointment date
+        if ($request->status === 'completed' && $currentDateTime->lt($appointmentDate)) {
+            $formattedDate = $appointmentDate->format('M j, Y g:i A');
+            return back()->withErrors([
+                'status' => "Cannot mark as completed before the appointment date ($formattedDate)."
+            ]);
+        }
+
+        // Prevent marking as in_progress before appointment date
+        if ($request->status === 'in_progress' && $currentDateTime->lt($appointmentDate)) {
+            $formattedDate = $appointmentDate->format('M j, Y g:i A');
+            return back()->withErrors([
+                'status' => "Cannot start appointment before the scheduled date ($formattedDate)."
+            ]);
+        }
+
         $appointment->update(['status' => $request->status]);
 
         return back()->with('success', 'Appointment status updated successfully!');
@@ -396,4 +415,5 @@ class AppointmentController extends Controller
         return redirect()->route('dashboard.appointments.index')
             ->with('success', "Appointment has been {$request->status} successfully.");
     }
+        
 }
