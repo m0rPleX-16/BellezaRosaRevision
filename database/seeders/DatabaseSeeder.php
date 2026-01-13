@@ -10,14 +10,17 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Admin User
-        User::create([
-            'full_name' => 'Nina Angela Malinaw',
-            'username'  => 'nina',
-            'phone'     => '09171234567',
-            'password'  => Hash::make('password'),
-            'role'      => 'admin',
-        ]);
+        // 1. Admin User - Update or create to ensure it exists and is active
+        $admin = User::updateOrCreate(
+            ['username' => 'nina'],
+            [
+                'full_name' => 'Nina Angela Malinaw',
+                'phone'     => '09171234567',
+                'password'  => Hash::make('password'),
+                'role'      => 'admin',
+                'is_active' => true,
+            ]
+        );
 
         // 2. Staff Users + Staff Profile
         $staffNames = ['Anna Cruz', 'Maria Santos', 'Liza Reyes'];
@@ -25,18 +28,25 @@ class DatabaseSeeder extends Seeder
         $colors = ['#EF4444', '#3B82F6', '#10B981'];
 
         foreach ($staffNames as $i => $name) {
-            $user = User::create([
-                'full_name' => $name,
-                'username'  => strtolower(str_replace(' ', '', $name)),
-                'phone'     => '09' . rand(100000000, 999999999),
-                'password'  => Hash::make('password'),
-                'role'      => 'staff',
-            ]);
+            $username = strtolower(str_replace(' ', '', $name));
+            $user = User::firstOrCreate(
+                ['username' => $username],
+                [
+                    'full_name' => $name,
+                    'phone'     => '09' . rand(100000000, 999999999),
+                    'password'  => Hash::make('password'),
+                    'role'      => 'staff',
+                    'is_active' => true,
+                ]
+            );
 
-            $user->staff()->create([
-                'specialty'   => $specialties[$i],
-                'color_code'  => $colors[$i],
-            ]);
+            // Only create staff profile if it doesn't exist
+            if (!$user->staff) {
+                $user->staff()->create([
+                    'specialty'   => $specialties[$i],
+                    'color_code'  => $colors[$i],
+                ]);
+            }
         }
 
         // 3. Customer Users (for login testing)
@@ -47,14 +57,16 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($customerUsers as $customer) {
-            User::create([
-                'full_name' => $customer['full_name'],
-                'username'  => $customer['username'],
-                'phone'     => $customer['phone'],
-                'password'  => Hash::make('password'),
-                'role'      => 'customer',
-                'is_active' => true,
-            ]);
+            User::firstOrCreate(
+                ['username' => $customer['username']],
+                [
+                    'full_name' => $customer['full_name'],
+                    'phone'     => $customer['phone'],
+                    'password'  => Hash::make('password'),
+                    'role'      => 'customer',
+                    'is_active' => true,
+                ]
+            );
         }
 
         // 4. Run all seeders in correct order

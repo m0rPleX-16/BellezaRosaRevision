@@ -157,7 +157,9 @@ class MessageController extends Controller
     // Get notifications
     public function getNotifications()
     {
-        $notifications = Auth::user()->notifications()
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $notifications = $user->customNotifications()
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get();

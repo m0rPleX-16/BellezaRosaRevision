@@ -5,24 +5,30 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UserManagementController extends Controller
 {
     public function index()
     {
         // Check if user is admin
-        if (!auth()->user()->isAdmin()) {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
-        $users = User::all();
+        // Only show admin and staff users (exclude customers)
+        $users = User::whereIn('role', ['admin', 'staff'])->get();
         return view('dashboard.users.index', compact('users'));
     }
 
     public function show (User $user)
     {
         // Check if user is admin
-        if (!auth()->user()->isAdmin()) {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
@@ -33,13 +39,23 @@ class UserManagementController extends Controller
 
     public function updateRole(Request $request, User $user)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
         $request->validate([
-            'role' => 'required|in:admin,staff,customer'
+            'role' => 'required|in:admin,staff' // Only allow admin and staff
         ]);
+
+        // Prevent removing the last admin
+        if ($user->isAdmin() && $request->role !== 'admin') {
+            $adminCount = User::where('role', 'admin')->where('is_active', true)->count();
+            if ($adminCount <= 1) {
+                return back()->withErrors(['role' => 'Cannot change role of the last active admin. At least one admin must remain.']);
+            }
+        }
 
         $user->update([
             'role' => $request->role
@@ -53,7 +69,9 @@ class UserManagementController extends Controller
      */
     public function store(Request $request)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
             abort(403, 'Unauthorized access.');
         }
 
@@ -62,7 +80,7 @@ class UserManagementController extends Controller
             'username' => 'required|string|max:50|alpha_dash|unique:users,username',
             'email' => 'required|string|email|max:255|unique:users,email',
             'phone' => 'nullable|string|max:20|regex:/^[0-9\-\+\(\)\s]+$/',
-            'role' => 'required|in:admin,staff,customer',
+            'role' => 'required|in:admin,staff', // Only allow admin and staff
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -95,8 +113,18 @@ class UserManagementController extends Controller
 
     public function toggleActive(Request $request, User $user)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
             abort(403, 'Unauthorized access.');
+        }
+
+        // Prevent deactivating the last active admin
+        if ($user->isAdmin() && $user->is_active) {
+            $adminCount = User::where('role', 'admin')->where('is_active', true)->count();
+            if ($adminCount <= 1) {
+                return back()->withErrors(['is_active' => 'Cannot deactivate the last active admin. At least one admin must remain active.']);
+            }
         }
 
         $user->update([

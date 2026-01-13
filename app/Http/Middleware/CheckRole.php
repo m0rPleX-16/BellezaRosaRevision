@@ -4,8 +4,10 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\Appointment;
+use App\Models\User;
 
 class CheckRole
 {
@@ -14,41 +16,49 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return redirect()->route('login');
         }
 
-        $user = auth()->user();
+        /** @var User $user */
+        $user = Auth::user();
+
+        // Parse roles from comma-separated string if needed
+        $allowedRoles = [];
+        foreach ($roles as $role) {
+            // Handle comma-separated roles like "admin,staff"
+            $parsedRoles = array_map('trim', explode(',', $role));
+            $allowedRoles = array_merge($allowedRoles, $parsedRoles);
+        }
+        $allowedRoles = array_unique($allowedRoles);
+
+        // Normalize user role (trim and lowercase for comparison)
+        $userRole = trim(strtolower($user->role ?? ''));
+        $normalizedAllowedRoles = array_map(function($role) {
+            return trim(strtolower($role));
+        }, $allowedRoles);
 
         // Check if user has any of the required roles
-        foreach ($roles as $role) {
-            if ($user->role === $role) {
-                // Apply role-specific restrictions
-                return $this->handleRoleRestrictions($request, $next, $user);
-            }
+        if (!in_array($userRole, $normalizedAllowedRoles)) {
+            abort(403, 'Unauthorized access. User role: "' . $user->role . '", Required roles: ' . implode(', ', $allowedRoles));
         }
 
-        // If no roles matched and user is admin, allow access
+        // Admin users can always proceed without staff profile check
         if ($user->isAdmin()) {
             return $next($request);
         }
 
-        abort(403, 'You do not have permission to access this page.');
-    }
-
-    /**
-     * Handle role-specific restrictions
-     */
-    private function handleRoleRestrictions(Request $request, Closure $next, $user)
-    {
+        // Staff users need staff profile and additional restrictions
         if ($user->isStaff()) {
             return $this->handleStaffRestrictions($request, $next);
         }
 
+        // Handle customer-specific restrictions
         if ($user->isCustomer()) {
             return $this->handleCustomerRestrictions($request, $next, $user);
         }
 
+        // For other roles, allow access if role matches
         return $next($request);
     }
 
@@ -57,7 +67,9 @@ class CheckRole
      */
     private function handleStaffRestrictions(Request $request, Closure $next): Response
     {
-        $staff = auth()->user()->staff;
+        /** @var User $user */
+        $user = Auth::user();
+        $staff = $user->staff;
         
         if (!$staff) {
             abort(403, 'Staff profile not found.');

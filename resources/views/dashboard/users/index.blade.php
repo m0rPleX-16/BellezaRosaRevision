@@ -13,7 +13,7 @@
             </button>
         </div>
         <!-- Statistics -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Admins -->
             <div class="card border-l-4 border-blue-500">
                 <div class="flex items-center justify-between">
@@ -44,23 +44,6 @@
                     </div>
                     <p class="text-2xl font-bold text-gray-900">
                         {{ $users->where('role', 'staff')->count() }}
-                    </p>
-                </div>
-            </div>
-
-            <!-- Customers -->
-            <div class="card border-l-4 border-purple-500">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <div class="p-3 bg-purple-100 rounded-xl">
-                            <i class="fas fa-user-friends text-purple-600 text-xl"></i>
-                        </div>
-                        <div class="ml-4">
-                            <h3 class="text-sm font-medium text-gray-500">Customers</h3>
-                        </div>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-900">
-                        {{ $users->where('role', 'customer')->count() }}
                     </p>
                 </div>
             </div>
@@ -118,8 +101,7 @@
                                     <span
                                         class="px-3 py-1 text-xs rounded-full font-semibold
                                 {{ $user->role == 'admin' ? 'bg-purple-100 text-purple-800' : '' }}
-                                {{ $user->role == 'staff' ? 'bg-blue-100 text-blue-800' : '' }}
-                                {{ $user->role == 'customer' ? 'bg-green-100 text-green-800' : '' }}">
+                                {{ $user->role == 'staff' ? 'bg-blue-100 text-blue-800' : '' }}">
                                         {{ ucfirst($user->role) }}
                                     </span>
                                 </td>
@@ -141,17 +123,18 @@
                                         </a>
 
                                         <!-- Role Dropdown -->
+                                        @php
+                                            $isLastAdmin = $user->isAdmin() && $users->where('role', 'admin')->where('is_active', true)->count() <= 1;
+                                        @endphp
                                         <form action="{{ route('dashboard.users.role', $user) }}" method="POST">
                                             @csrf
                                             @method('PATCH')
                                             <select name="role" onchange="this.form.submit()"
-                                                class="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-200">
-                                                <option value="customer" {{ $user->role == 'customer' ? 'selected' : '' }}>
-                                                    Customer</option>
-                                                <option value="staff" {{ $user->role == 'staff' ? 'selected' : '' }}>Staff
-                                                </option>
-                                                <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Admin
-                                                </option>
+                                                class="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                                {{ $isLastAdmin ? 'disabled' : '' }}
+                                                title="{{ $isLastAdmin ? 'Cannot change role of the last admin' : '' }}">
+                                                <option value="staff" {{ $user->role == 'staff' ? 'selected' : '' }}>Staff</option>
+                                                <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Admin</option>
                                             </select>
                                         </form>
 
@@ -160,8 +143,8 @@
                                             @csrf
                                             @method('PATCH')
                                             <button type="submit"
-                                                class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-lg transition"
-                                                title="{{ $user->is_active ? 'Deactivate User' : 'Activate User' }}">
+                                                class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-lg transition {{ $isLastAdmin && $user->is_active ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                                {{ $isLastAdmin && $user->is_active ? 'disabled title="Cannot deactivate the last admin"' : 'title="' . ($user->is_active ? 'Deactivate User' : 'Activate User') . '"' }}>
                                                 {{ $user->is_active ? 'Deactivate' : 'Activate' }}
                                             </button>
                                         </form>
@@ -248,13 +231,12 @@
                                         class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                                         <option value="" disabled {{ !old('role') ? 'selected' : '' }}>Select role
                                         </option>
-                                        <option value="customer" {{ old('role') == 'customer' ? 'selected' : '' }}>
-                                            Customer</option>
                                         <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff
                                         </option>
                                         <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin
                                         </option>
                                     </select>
+                                    <p class="text-xs text-gray-500 mt-1">Note: Only Staff and Admin can be added here. Customers register through the public registration.</p>
                                 </div>
                                 <div class="form-group">
                                     <label class="block text-gray-700 font-semibold mb-2">Password *</label>

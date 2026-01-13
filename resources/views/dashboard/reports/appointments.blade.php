@@ -12,9 +12,9 @@
             <button onclick="downloadReport()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
                 <i class="fas fa-download mr-2"></i> Download Report
             </button>
-            <button onclick="location.href='{{ route('dashboard.reports.index') }}'" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg">
+            <a href="{{ route('dashboard.reports.index') }}" class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg inline-flex items-center">
                 <i class="fas fa-arrow-left mr-2"></i> Back
-            </button>
+            </a>
         </div>
     </div>
 
@@ -101,7 +101,7 @@
                                     <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ number_format($percentage, 1) }}%</td>
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         <div class="w-full bg-gray-200 rounded-full h-2">
-                                            <div class="{{ $color }} h-2 rounded-full" style="width: {{ $percentage }}%"></div>
+                                            <div class="{{ $color }} h-2 rounded-full progress-bar" data-width="{{ number_format($percentage, 1) }}"></div>
                                         </div>
                                     </td>
                                 </tr>
@@ -131,7 +131,7 @@
                                 <span class="text-gray-600">{{ $count }} ({{ number_format($percentage, 1) }}%)</span>
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-purple-500 h-2 rounded-full" style="width: {{ $percentage }}%"></div>
+                                <div class="bg-purple-500 h-2 rounded-full progress-bar" data-width="{{ number_format($percentage, 1) }}"></div>
                             </div>
                         </div>
                     @endforeach
@@ -287,7 +287,7 @@ function resetDates() {
     loadReport();
 }
 
-// Set default dates if not set
+// Set default dates if not set and initialize progress bars
 document.addEventListener('DOMContentLoaded', function() {
     if (!document.getElementById('startDate').value) {
         const weekAgo = new Date();
@@ -298,6 +298,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!document.getElementById('endDate').value) {
         document.getElementById('endDate').value = new Date().toISOString().split('T')[0];
     }
+    
+    // Set progress bar widths from data attributes
+    document.querySelectorAll('.progress-bar').forEach(function(bar) {
+        const width = bar.getAttribute('data-width');
+        if (width) {
+            bar.style.width = width + '%';
+        }
+    });
 });
 </script>
 @endsection

@@ -6,7 +6,8 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Models\Customer;     
+use App\Models\Customer;
+use App\Models\Notification;     
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -46,9 +47,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Message::class, 'receiver_id');
     }
 
-    public function notifications()
+    /**
+     * Get the custom notifications for the user.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function customNotifications()
     {
-        return $this->hasMany(Notification::class);
+        return $this->hasMany(Notification::class, 'user_id');
     }
 
     // Get unread messages count
@@ -60,7 +66,7 @@ class User extends Authenticatable implements MustVerifyEmail
     // Get unread notifications count
     public function getUnreadNotificationsCountAttribute()
     {
-        return $this->notifications()->unread()->count();
+        return $this->customNotifications()->unread()->count();
     }
 
     // Get total unread count

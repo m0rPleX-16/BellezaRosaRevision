@@ -27,22 +27,34 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Try to authenticate with username
-        if (Auth::attempt(['username' => $request->username, 'password' => $request->password])) {
-            $request->session()->regenerate();
-            $user = Auth::user();
+        // Find user by username
+        $user = User::where('username', $request->username)->first();
 
-            if ($user->role === 'admin' || $user->role === 'staff') {
-                return redirect()->intended('/dashboard');
-            }   
-
-            // Redirect customers to their dashboard
-            return redirect()->intended('/customer/dashboard');
+        // Check if user exists and password is correct
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return back()->withErrors([
+                'username' => 'The provided credentials do not match our records.',
+            ])->onlyInput('username');
         }
 
-        return back()->withErrors([
-            'username' => 'The provided credentials do not match our records.',
-        ])->onlyInput('username');
+        // Check if user is active
+        if (!$user->is_active) {
+            return back()->withErrors([
+                'username' => 'Your account has been deactivated. Please contact an administrator.',
+            ])->onlyInput('username');
+        }
+
+        // Log the user in
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        // Redirect based on role
+        if ($user->role === 'admin' || $user->role === 'staff') {
+            return redirect()->intended(route('dashboard.index'));
+        }   
+
+        // Redirect customers to their dashboard
+        return redirect()->intended(route('customer.dashboard'));
     }
 
     public function register(Request $request)
