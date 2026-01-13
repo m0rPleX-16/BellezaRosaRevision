@@ -29,10 +29,17 @@
                     @auth
                         @if (auth()->user()->isCustomer())
                             <li>
-                                <a href="{{ route('customer.dashboard') }}"
-                                    class="nav-link {{ request()->is('customer/dashboard*') ? 'active' : '' }}"
+                                <a href="{{ route('customer.appointments.index') }}"
+                                    class="nav-link {{ request()->is('customer/appointments*') ? 'active' : '' }}"
                                     style="font-weight: 600; color: #1E40AF;">
                                     <i class="fas fa-calendar-alt mr-1"></i> My Appointments
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('customer.staff') }}"
+                                    class="nav-link {{ request()->is('customer/staff*') ? 'active' : '' }}"
+                                    style="font-weight: 600; color: #1E40AF;">
+                                    <i class="fas fa-user-tie mr-1"></i> Spa Receptionist
                                 </a>
                             </li>
                         @else

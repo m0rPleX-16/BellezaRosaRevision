@@ -51,7 +51,7 @@
                                 @if(isset($staffMember) && is_object($staffMember) && isset($staffMember->user) && is_object($staffMember->user))
                                 <option value="{{ $staffMember->id ?? '' }}" 
                                         data-specialty="{{ $staffMember->specialty ?? 'both' }}">
-                                    {{ $staffMember->user->full_name ?? 'Staff' }} ({{ ucfirst($staffMember->specialty ?? 'both') }})
+                                    {{ $staffMember->user->full_name ?? 'Staff' }}@if(isset($staffMember->user->gender) && $staffMember->user->gender) ({{ $staffMember->user->formatted_gender }})@endif - {{ $staffMember->formatted_specialty ?? 'All Services' }}
                                 </option>
                                 @endif
                             @endforeach

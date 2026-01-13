@@ -51,6 +51,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Customer Dashboard    
         Route::get('/dashboard', [CustomerDashboardController::class, 'index'])->name('dashboard');
+        // Staff Listing
+        Route::get('/staff', [CustomerDashboardController::class, 'staff'])->name('staff');
+        Route::get('/staff/{id}', [CustomerDashboardController::class, 'showStaff'])->name('staff.show');
         // Appointments
         Route::prefix('appointments')->name('appointments.')->group(function () {
             Route::get('/', [AppointmentController::class, 'customerIndex'])->name('index');
@@ -109,6 +112,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/users/{user}/role', [UserManagementController::class, 'updateRole'])->name('users.role.update');
         Route::patch('/users/{user}/role', [UserManagementController::class, 'updateRole'])->name('users.role');
         Route::patch('/users/{user}/toggle-active', [UserManagementController::class, 'toggleActive'])->name('users.toggle');
+        Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
     });
 
     // Routes accessible by both admin and staff

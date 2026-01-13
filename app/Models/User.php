@@ -20,7 +20,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'role',
-        'is_active'
+        'is_active',
+        'gender'
     ];
 
     protected $hidden = [
@@ -32,6 +33,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
@@ -55,6 +57,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function customNotifications()
     {
         return $this->hasMany(Notification::class, 'user_id');
+    }
+
+    /**
+     * Override Laravel's notifications() to use custom notifications
+     */
+    public function notifications()
+    {
+        return $this->customNotifications();
+    }
+
+    /**
+     * Override Laravel's unreadNotifications() to use custom notifications
+     */
+    public function unreadNotifications()
+    {
+        return $this->customNotifications()->unread();
     }
 
     // Get unread messages count
@@ -99,6 +117,19 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isCustomer(): bool
     {
         return $this->role === 'customer';
+    }
+
+    /**
+     * Get formatted gender display
+     */
+    public function getFormattedGenderAttribute(): string
+    {
+        return match($this->gender) {
+            'male' => '♂ Male',
+            'female' => '♀ Female',
+            'other' => '⚧ Other',
+            default => ''
+        };
     }
 
     protected static function booted()

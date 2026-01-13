@@ -69,7 +69,7 @@
                                     <option value="">Select Staff</option>
                                     @foreach($staff as $staffMember)
                                         <option value="{{ $staffMember->id }}">
-                                            {{ $staffMember->user->full_name }} ({{ ucfirst($staffMember->specialty) }})
+                                            {{ $staffMember->user->full_name }}@if($staffMember->user->gender) ({{ $staffMember->user->formatted_gender }})@endif - {{ $staffMember->formatted_specialty }}
                                         </option>
                                     @endforeach
                                 </select>

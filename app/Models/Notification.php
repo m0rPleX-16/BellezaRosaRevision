@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Notification extends Model
 {
+    protected $table = 'notifications';
+
     protected $fillable = [
         'user_id',
         'type',
@@ -45,6 +47,12 @@ class Notification extends Model
             'data' => $data,
             'is_read' => false
         ]);
+    }
+
+    // Check if notification is unread
+    public function unread()
+    {
+        return !$this->is_read;
     }
 
     // Scope for unread notifications

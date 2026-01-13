@@ -41,7 +41,7 @@
                         <span
                             class="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
                             <i class="fas fa-star text-yellow-500 mr-2"></i>
-                            {{ $user->staff ? ucfirst($user->staff->specialty) . ' Specialist' : 'No Specialty' }}
+                            {{ $user->staff ? $user->staff->formatted_specialty . ' Specialist' : 'No Specialty' }}
                         </span>
                     </div>
                 </div>
@@ -54,6 +54,9 @@
                             <div class="mt-1">
                                 <p class="text-gray-900">{{ $user->email ?? 'No email provided' }}</p>
                                 <p class="text-gray-900">{{ $user->phone ?? 'No phone provided' }}</p>
+                                @if($user->gender)
+                                    <p class="text-gray-900">Gender: <span class="font-medium">{{ $user->formatted_gender }}</span></p>
+                                @endif
                             </div>
                         </div>
 
@@ -78,7 +81,7 @@
                             <div>
                                 <h3 class="text-sm font-medium text-gray-500">Staff Details</h3>
                                 <div class="mt-1">
-                                    <p>Specialty: <span class="font-medium">{{ ucfirst($user->staff->specialty) }}</span>
+                                    <p>Specialty: <span class="font-medium">{{ $user->staff->formatted_specialty }}</span>
                                     </p>
                                     <p>Member Since: {{ $user->staff->created_at->format('M d, Y') }}</p>
                                 </div>

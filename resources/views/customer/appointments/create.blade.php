@@ -16,50 +16,86 @@
                 <input type="hidden" name="customer_id" value="{{ auth()->user()->customer->id }}">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Service Selection -->
-                    <div class="col-span-2">
-                        <label for="service_id" class="block text-sm font-medium text-gray-700 mb-1">
-                            Service <span class="text-red-500">*</span>
-                        </label>
-                        <select name="service_id" id="service_id" 
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                required>
-                            <option value="">-- Select a service --</option>
-                            @foreach($services as $service)
-                                <option value="{{ $service->id }}" 
-                                        data-duration="{{ $service->duration_minutes }}"
-                                        data-price="{{ $service->price_regular }}">
-                                    {{ $service->name }} ({{ $service->duration_minutes }} min)
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('service_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    @if(isset($prefilledService) && isset($prefilledStaff))
+                        <!-- Service Display (Read-only when pre-filled) -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Service <span class="text-red-500">*</span>
+                            </label>
+                            <div id="service_display" class="w-full rounded-md border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 font-medium">
+                                {{ $prefilledService->name }} ({{ $prefilledService->duration_minutes }} min)
+                            </div>
+                            <input type="hidden" name="service_id" id="service_id" value="{{ $prefilledService->id }}" required>
+                            <input type="hidden" id="service_duration" value="{{ $prefilledService->duration_minutes }}">
+                            <input type="hidden" id="service_price" value="{{ $prefilledService->price_regular }}">
+                            <input type="hidden" id="service_price_premium" value="{{ $prefilledService->price_premium ?? $prefilledService->price_regular }}">
+                            <input type="hidden" id="service_name" value="{{ $prefilledService->name }}">
+                            @error('service_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
 
-                    <!-- Staff Selection -->
-                    <div class="col-span-2">
-                        <label for="staff_id" class="block text-sm font-medium text-gray-700 mb-1">
-                            Staff Member <span class="text-red-500">*</span>
-                        </label>
-                        <select name="staff_id" id="staff_id" 
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                required>
-                            <option value="">-- Select a staff member --</option>
-                            @foreach($staff as $staffMember)
-                                <option value="{{ $staffMember->id }}">
-                                    {{ $staffMember->user->full_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('staff_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                        <!-- Staff Display (Read-only when pre-filled) -->
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Staff Member <span class="text-red-500">*</span>
+                            </label>
+                            <div id="staff_display" class="w-full rounded-md border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 font-medium">
+                                {{ $prefilledStaff->user->full_name }}@if($prefilledStaff->user->gender) ({{ $prefilledStaff->user->formatted_gender }})@endif
+                            </div>
+                            <input type="hidden" name="staff_id" id="staff_id" value="{{ $prefilledStaff->id }}" required>
+                            <input type="hidden" id="staff_name" value="{{ $prefilledStaff->user->full_name }}@if($prefilledStaff->user->gender) ({{ $prefilledStaff->user->formatted_gender }})@endif">
+                            @error('staff_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @else
+                        <!-- Service Selection (Dropdown when not pre-filled) -->
+                        <div class="col-span-2">
+                            <label for="service_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                Service <span class="text-red-500">*</span>
+                            </label>
+                            <select name="service_id" id="service_id" 
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    required>
+                                <option value="">-- Select a service --</option>
+                                @foreach($services as $service)
+                                    <option value="{{ $service->id }}" 
+                                            data-duration="{{ $service->duration_minutes }}"
+                                            data-price="{{ $service->price_regular }}"
+                                            data-price-premium="{{ $service->price_premium ?? $service->price_regular }}">
+                                        {{ $service->name }} ({{ $service->duration_minutes }} min)
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('service_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <!-- Staff Selection (Dropdown when not pre-filled) -->
+                        <div class="col-span-2">
+                            <label for="staff_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                Staff Member <span class="text-red-500">*</span>
+                            </label>
+                            <select name="staff_id" id="staff_id" 
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    required>
+                                <option value="">-- Select a staff member --</option>
+                                @foreach($staff as $staffMember)
+                                    <option value="{{ $staffMember->id }}">
+                                        {{ $staffMember->user->full_name }}@if($staffMember->user->gender) ({{ $staffMember->user->formatted_gender }})@endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('staff_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endif
 
                     <!-- Date Selection -->
-                    <div>
+                    <div class="col-span-2">
                         <label for="appointment_date" class="block text-sm font-medium text-gray-700 mb-1">
                             Date <span class="text-red-500">*</span>
                         </label>
@@ -72,23 +108,12 @@
                         @error('appointment_date')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                        <p class="mt-1 text-sm text-gray-500">The first available time slot will be automatically selected based on your service duration.</p>
                     </div>
 
-                    <!-- Time Selection -->
-                    <div>
-                        <label for="appointment_time" class="block text-sm font-medium text-gray-700 mb-1">
-                            Time <span class="text-red-500">*</span>
-                        </label>
-                        <select name="appointment_time" id="appointment_time" 
-                                class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                disabled
-                                required>
-                            <option value="">Select a date first</option>
-                        </select>
-                        @error('appointment_time')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <!-- Hidden time field (auto-filled) -->
+                    <input type="hidden" name="appointment_time" id="appointment_time" value="">
+                    <input type="hidden" name="start_datetime" id="start_datetime" value="">
 
                     <!-- Notes -->
                     <div class="col-span-2">
@@ -120,8 +145,8 @@
                                 <span id="staff-summary">--</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Date & Time:</span>
-                                <span id="datetime-summary">--</span>
+                                <span class="text-gray-600">Date:</span>
+                                <span id="date-summary">--</span>
                             </div>
                             <div class="border-t border-gray-200 my-2"></div>
                             <div class="flex justify-between font-medium">
@@ -153,31 +178,53 @@
         const serviceSelect = document.getElementById('service_id');
         const staffSelect = document.getElementById('staff_id');
         const dateInput = document.getElementById('appointment_date');
-        const timeSelect = document.getElementById('appointment_time');
+        const timeInput = document.getElementById('appointment_time');
+        const startDatetimeInput = document.getElementById('start_datetime');
         
-        // Update summary when service changes
-        serviceSelect.addEventListener('change', updateSummary);
-        staffSelect.addEventListener('change', updateSummary);
-        dateInput.addEventListener('change', updateSummary);
-        timeSelect.addEventListener('change', updateSummary);
+        // Check if service and staff are pre-filled (hidden inputs) or dropdowns
+        const isPrefilled = serviceSelect && serviceSelect.tagName === 'INPUT' && staffSelect && staffSelect.tagName === 'INPUT';
         
-        // When date changes, fetch available time slots
-        dateInput.addEventListener('change', function() {
-            const selectedDate = this.value;
-            const staffId = staffSelect.value;
+        // Get service and staff details
+        let serviceDuration, servicePrice, servicePricePremium, serviceName, staffName;
+        
+        if (isPrefilled) {
+            // Pre-filled mode: get from hidden inputs
+            serviceDuration = document.getElementById('service_duration')?.value;
+            servicePrice = document.getElementById('service_price')?.value;
+            servicePricePremium = document.getElementById('service_price_premium')?.value;
+            serviceName = document.getElementById('service_name')?.value || document.getElementById('service_display')?.textContent.trim() || '--';
+            staffName = document.getElementById('staff_name')?.value || document.getElementById('staff_display')?.textContent.trim() || '--';
             
-            if (!selectedDate || !staffId) {
-                timeSelect.disabled = true;
-                timeSelect.innerHTML = '<option value="">Select staff and date first</option>';
+            // Update summary immediately
+            document.getElementById('service-summary').textContent = serviceName;
+            document.getElementById('duration-summary').textContent = serviceDuration ? `${serviceDuration} minutes` : '--';
+            document.getElementById('staff-summary').textContent = staffName;
+            document.getElementById('price-summary').textContent = `₱${parseFloat(servicePricePremium || servicePrice || 0).toFixed(2)}`;
+        } else {
+            // Dropdown mode: add event listeners
+            serviceSelect.addEventListener('change', updateSummary);
+            staffSelect.addEventListener('change', updateSummary);
+        }
+        
+        dateInput.addEventListener('change', function() {
+            fetchTimeSlots();
+        });
+        
+        // When date changes, fetch available time slots and auto-select first one
+        function fetchTimeSlots() {
+            const selectedDate = dateInput.value;
+            const staffId = staffSelect.value;
+            const serviceId = serviceSelect.value;
+            
+            if (!selectedDate || !staffId || !serviceId) {
+                timeInput.value = '';
+                startDatetimeInput.value = '';
+                updateSummary();
                 return;
             }
             
-            // Show loading
-            timeSelect.disabled = true;
-            timeSelect.innerHTML = '<option value="">Loading available times...</option>';
-            
-            // Fetch available time slots via AJAX
-            fetch(`/dashboard/appointments/check-availability?date=${selectedDate}&staff_id=${staffId}`, {
+            // Fetch available time slots via AJAX (with service_id for duration-based slots)
+            fetch(`/dashboard/appointments/check-availability?date=${selectedDate}&staff_id=${staffId}&service_id=${serviceId}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json',
@@ -191,59 +238,83 @@
                 return response.json();
             })
             .then(data => {
-                timeSelect.innerHTML = '';
-                
                 if (data.available_times && data.available_times.length > 0) {
-                    data.available_times.forEach(time => {
-                        const option = document.createElement('option');
-                        option.value = time.time;
-                        option.textContent = time.formatted_time || time.time; // Fallback to time if formatted_time is not available
-                        timeSelect.appendChild(option);
-                    });
-                    timeSelect.disabled = false;
+                    // Auto-select the first available time slot
+                    const firstTime = data.available_times[0];
+                    timeInput.value = firstTime.time;
+                    
+                    // Combine date and time for start_datetime
+                    const startDatetime = `${selectedDate} ${firstTime.time}`;
+                    startDatetimeInput.value = startDatetime;
+                    
+                    updateSummary();
                 } else {
-                    timeSelect.innerHTML = '<option value="">No available time slots</option>';
+                    timeInput.value = '';
+                    startDatetimeInput.value = '';
+                    updateSummary();
+                    alert('No available time slots for the selected date. Please choose another date.');
                 }
             })
             .catch(error => {
                 console.error('Error fetching available times:', error);
-                timeSelect.innerHTML = '<option value="">Error loading times. Please try again.</option>';
+                timeInput.value = '';
+                startDatetimeInput.value = '';
+                updateSummary();
             });
-        });
+        }
         
-        // Enable time select when staff is selected
-        staffSelect.addEventListener('change', function() {
-            if (this.value && dateInput.value) {
-                dateInput.dispatchEvent(new Event('change'));
-            }
-        });
+        // Enable time fetch when staff or service is selected (only for dropdown mode)
+        if (!isPrefilled) {
+            staffSelect.addEventListener('change', function() {
+                if (this.value && dateInput.value && serviceSelect.value) {
+                    fetchTimeSlots();
+                }
+            });
+            
+            serviceSelect.addEventListener('change', function() {
+                if (this.value && dateInput.value && staffSelect.value) {
+                    fetchTimeSlots();
+                }
+            });
+        }
         
         function updateSummary() {
-            // Update service summary
-            const selectedService = serviceSelect.options[serviceSelect.selectedIndex];
-            document.getElementById('service-summary').textContent = 
-                selectedService.text || '--';
+            if (isPrefilled) {
+                // Pre-filled mode: use stored values
+                document.getElementById('service-summary').textContent = serviceName;
+                document.getElementById('duration-summary').textContent = serviceDuration ? `${serviceDuration} minutes` : '--';
+                document.getElementById('staff-summary').textContent = staffName;
                 
-            // Update duration
-            const duration = selectedService ? selectedService.dataset.duration : '--';
-            document.getElementById('duration-summary').textContent = 
-                duration ? `${duration} minutes` : '--';
+                // Update date only
+                const date = dateInput.value;
+                document.getElementById('date-summary').textContent = 
+                    date ? new Date(date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : '--';
                 
-            // Update staff
-            const selectedStaff = staffSelect.options[staffSelect.selectedIndex];
-            document.getElementById('staff-summary').textContent = 
-                selectedStaff.text || '--';
+                document.getElementById('price-summary').textContent = 
+                    `₱${parseFloat(servicePricePremium || servicePrice || 0).toFixed(2)}`;
+            } else {
+                // Dropdown mode: get from selected options
+                const selectedService = serviceSelect.options[serviceSelect.selectedIndex];
+                document.getElementById('service-summary').textContent = 
+                    selectedService.text || '--';
+                    
+                const duration = selectedService ? selectedService.dataset.duration : '--';
+                document.getElementById('duration-summary').textContent = 
+                    duration ? `${duration} minutes` : '--';
+                    
+                const selectedStaff = staffSelect.options[staffSelect.selectedIndex];
+                document.getElementById('staff-summary').textContent = 
+                    selectedStaff.text || '--';
                 
-            // Update date and time
-            const date = dateInput.value;
-            const time = timeSelect.options[timeSelect.selectedIndex]?.text || '--';
-            document.getElementById('datetime-summary').textContent = 
-                date ? `${new Date(date).toDateString()}, ${time}` : '--';
-                
-            // Update price
-            const price = selectedService ? selectedService.dataset.price : '0.00';
-            document.getElementById('price-summary').textContent = 
-                `₱${parseFloat(price).toFixed(2)}`;
+                // Update date only
+                const date = dateInput.value;
+                document.getElementById('date-summary').textContent = 
+                    date ? new Date(date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : '--';
+                    
+                const price = selectedService ? (selectedService.dataset.pricePremium || selectedService.dataset.price) : '0.00';
+                document.getElementById('price-summary').textContent = 
+                    `₱${parseFloat(price).toFixed(2)}`;
+            }
         }
         
         // Initial summary update

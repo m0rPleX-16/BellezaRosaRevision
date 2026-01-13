@@ -29,8 +29,7 @@
                 </div>
 
                 <!-- Right Group: The Number (Pushed to the right by justify-between) -->
-                <!-- The original PHP was: {{ $payments->total() }} -->
-                <p class="text-2xl font-bold text-gray-900">4,521</p>
+                <p class="text-2xl font-bold text-gray-900">{{ number_format($totalPayments ?? 0) }}</p>
             </div>
         </div>
 
@@ -49,8 +48,7 @@
                 </div>
                 
                 <!-- Right Group: The Number -->
-                <!-- The original PHP was: {{ \App\Models\Payment::where('status', 'paid')->count() }} -->
-                <p class="text-2xl font-bold text-gray-900">3,980</p>
+                <p class="text-2xl font-bold text-gray-900">{{ number_format($paidPayments ?? 0) }}</p>
             </div>
         </div>
 
@@ -69,8 +67,7 @@
                 </div>
 
                 <!-- Right Group: The Number -->
-                <!-- The original PHP was: {{ \App\Models\Payment::where('status', 'pending')->count() }} -->
-                <p class="text-2xl font-bold text-gray-900">450</p>
+                <p class="text-2xl font-bold text-gray-900">{{ number_format($pendingPayments ?? 0) }}</p>
             </div>
         </div>
 
@@ -89,8 +86,7 @@
                 </div>
 
                 <!-- Right Group: The Number -->
-                <!-- The original PHP was: {{ \App\Models\Payment::where('status', 'failed')->count() }} -->
-                <p class="text-2xl font-bold text-gray-900">91</p>
+                <p class="text-2xl font-bold text-gray-900">{{ number_format($failedPayments ?? 0) }}</p>
             </div>
         </div>
     </div>
@@ -117,11 +113,11 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 py-3 text-sm font-medium text-gray-900">#{{ $payment->id }}</td>
                         <td class="px-4 py-3">
-                            <div class="font-medium text-gray-900">{{ $payment->customer->full_name }}</div>
-                            <div class="text-sm text-gray-500">{{ $payment->customer->phone }}</div>
+                            <div class="font-medium text-gray-900">{{ $payment->customer->full_name ?? 'Deleted Customer' }}</div>
+                            <div class="text-sm text-gray-500">{{ $payment->customer->phone ?? 'N/A' }}</div>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-900">
-                            {{ $payment->appointment->service->name }}<br>
+                            {{ $payment->appointment->service->name ?? 'Deleted Service' }}<br>
                             <span class="text-xs text-gray-500">
                                 {{ $payment->appointment->start_datetime->format('M j, g:i A') }}
                             </span>

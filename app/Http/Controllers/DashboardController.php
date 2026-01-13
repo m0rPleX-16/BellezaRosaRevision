@@ -42,7 +42,9 @@ class DashboardController extends Controller
 
     // Get customer services data for the selected date range
     $customersWithServices = Customer::with(['appointments.service'])
-        ->has('appointments')
+        ->whereHas('appointments', function($query) {
+            $query->whereHas('service'); // Only include appointments with valid services
+        })
         ->orderBy('total_visits', 'desc')
         ->limit(10)
         ->get();
@@ -52,6 +54,7 @@ class DashboardController extends Controller
     // Get most popular service
     $popularService = Appointment::select('service_id', DB::raw('COUNT(*) as count'))
         ->with('service')
+        ->whereHas('service') // Only count appointments with valid services
         ->groupBy('service_id')
         ->orderBy('count', 'desc')
         ->first();
@@ -191,13 +194,18 @@ class DashboardController extends Controller
     private function getAppointmentsData($startDate, $endDate)
     {
         // Get appointments for the selected date range
+        // Filter out appointments with missing relationships (orphaned data)
         $rangeAppointments = Appointment::with(['customer', 'service', 'staff.user'])
+            ->whereHas('customer')
+            ->whereHas('service')
             ->whereBetween('start_datetime', [$startDate, $endDate])
             ->orderBy('start_datetime')
             ->get();
 
         // Get upcoming appointments (always next 7 days regardless of filter)
         $upcomingAppointments = Appointment::with(['customer', 'service', 'staff.user'])
+            ->whereHas('customer')
+            ->whereHas('service')
             ->where('start_datetime', '>', now())
             ->where('start_datetime', '<=', now()->addDays(7))
             ->orderBy('start_datetime')
@@ -244,10 +252,12 @@ private function getCustomerServicesData($startDate, $endDate)
 {
     $customersWithServices = Customer::with(['appointments' => function ($query) use ($startDate, $endDate) {
     $query->whereBetween('start_datetime', [$startDate, $endDate])
+          ->whereHas('service') // Only include appointments with valid services
           ->with('service'); // eager load service only for appointments in range
 }])
 ->whereHas('appointments', function($query) use ($startDate, $endDate) {
-    $query->whereBetween('start_datetime', [$startDate, $endDate]);
+    $query->whereBetween('start_datetime', [$startDate, $endDate])
+          ->whereHas('service'); // Only count appointments with valid services
 })
 ->withCount(['appointments as range_appointments_count' => function($query) use ($startDate, $endDate) {
     $query->whereBetween('start_datetime', [$startDate, $endDate]);

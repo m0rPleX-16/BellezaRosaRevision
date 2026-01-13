@@ -114,13 +114,15 @@
             @if (auth()->user()->isAdmin())
                 <div class="nav-item {{ request()->is('dashboard/users*') ? 'active' : '' }}"
                     data-href="{{ route('dashboard.users.index') }}">
-                    <i class="fas fa-users-cog mr-3"></i> Manage Users
+                    <i class="fas fa-users-cog mr-3"></i> Manage Staff
                 </div>
             @endif
-            <div class="nav-item {{ request()->is('dashboard/reports*') ? 'active' : '' }}"
-                data-href="{{ route('dashboard.reports.index') }}">
-                <i class="fas fa-chart-bar mr-3"></i> Reports
-            </div>
+            @if (auth()->user()->isAdmin())
+                <div class="nav-item {{ request()->is('dashboard/reports*') ? 'active' : '' }}"
+                    data-href="{{ route('dashboard.reports.index') }}">
+                    <i class="fas fa-chart-bar mr-3"></i> Reports
+                </div>
+            @endif
             <div class="nav-item mt-auto cursor-pointer" onclick="confirmLogout()">
                 <i class="fas fa-sign-out-alt mr-3"></i> Logout
             </div>

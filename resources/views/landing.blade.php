@@ -587,7 +587,7 @@
                 <p>Belleza Rosa Salon System streamlines appointments, customer management, and business operations so
                     you can focus on what you do best - creating beautiful transformations.</p>
                 <div class="hero-buttons">
-                    <button onclick="openBookingModal()" class="btn btn-gold">Book Now</button>
+                    <a href="{{ route('login') }}" class="btn btn-gold">Book Now</a>
                     <a href="#features" class="btn btn-outline">Learn More</a>
                 </div>
             </div>
@@ -696,8 +696,8 @@
     <section class="cta">
         <div class="container">
             <h2>Ready to Book Your Appointment?</h2>
-            <p>Experience premium beauty services with our easy online booking system. No account required!</p>
-            <button onclick="openBookingModal()" class="btn btn-gold">Book Now</button>
+            <p>Experience premium beauty services with our easy online booking system. Login or create an account to get started!</p>
+            <a href="{{ route('login') }}" class="btn btn-gold">Book Now</a>
         </div>
     </section>
 
@@ -745,8 +745,8 @@
         </div>
     </footer>
 
-    <!-- Include Livewire Booking Modal -->
-    @livewire('guest-booking-modal')
+    <!-- Booking Modal Removed - Users now redirect to login page -->
+    {{-- @livewire('guest-booking-modal') --}}
     <!-- Toast Notification -->
     <div id="toast"
         class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 hidden transition-all duration-300">

@@ -2,7 +2,7 @@
 
 @if (auth()->check() && auth()->user()->isStaff())
     @php
-        header('Location: ' . route('dashboard.staff.index'));
+        header('Location: ' . route('staff.dashboard'));
         exit();
     @endphp
 @endif
@@ -141,25 +141,8 @@
 
 
 
-    <!-- Quick Actions & Appointments -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Quick Actions -->
-        <div class="card">
-            <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-bolt text-yellow-500 mr-2"></i> Quick Actions
-            </h3>
-            <div class="space-y-4">
-                <button onclick="openBookingModal()"
-                    class="w-full bg-yellow-500 hover:bg-yellow-400 text-white font-bold py-4 rounded-xl transition transform hover:-translate-y-1 shadow-lg flex items-center justify-center">
-                    <i class="fas fa-plus mr-2"></i> New Appointment
-                </button>
-                <a href="{{ route('dashboard.appointments.index') }}"
-                    class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition transform hover:-translate-y-1 flex items-center justify-center">
-                    <i class="fas fa-list mr-2"></i> View All Appointments
-                </a>
-            </div>
-        </div>
-
+    <!-- Appointments -->
+    <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
         <!-- Range Appointments -->
         <div class="card">
             <div class="flex items-center justify-between mb-4">
@@ -186,9 +169,9 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <div class="font-medium text-gray-900">{{ $appointment->customer->full_name }}
+                                        <div class="font-medium text-gray-900">{{ $appointment->customer->full_name ?? 'Deleted Customer' }}
                                         </div>
-                                        <div class="text-sm text-gray-500">{{ $appointment->service->name }}</div>
+                                        <div class="text-sm text-gray-500">{{ $appointment->service->name ?? 'Deleted Service' }}</div>
                                     </div>
                                 </div>
                                 <span
@@ -275,10 +258,10 @@
                                         {{ $appointment->start_datetime->format('M j, g:i A') }}
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">
-                                        {{ $appointment->customer->full_name }}
+                                        {{ $appointment->customer->full_name ?? 'Deleted Customer' }}
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">
-                                        {{ $appointment->service->name }}
+                                        {{ $appointment->service->name ?? 'Deleted Service' }}
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">
                                         {{ $appointment->staff->user->full_name ?? 'Unassigned' }}
@@ -308,7 +291,6 @@
 
     <!-- Include the same modals as before -->
     @include('dashboard.partials.customer-services-modal')
-    @include('dashboard.partials.booking-modal')
 
     <script>
         // Date Filter Functionality
@@ -847,10 +829,6 @@
         });
 
         // Modal Functions
-        function openBookingModal() {
-            document.getElementById('bookingModal').classList.remove('hidden');
-        }
-
         function closeModal(modalId) {
             document.getElementById(modalId).classList.add('hidden');
         }

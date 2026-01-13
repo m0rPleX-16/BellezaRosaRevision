@@ -16,7 +16,10 @@ class PaymentController extends Controller
     public function index()
     {
         // Staff can only view payments for their own appointments
-        $query = Payment::with(['appointment.service', 'appointment.staff', 'customer']);
+        $query = Payment::with(['appointment.service', 'appointment.staff', 'customer'])
+            ->whereHas('appointment', function ($q) {
+                $q->whereHas('customer')->whereHas('service');
+            });
 
         if (auth()->user()->isStaff() && auth()->user()->staff) {
             $query->whereHas('appointment', function ($q) {
@@ -26,7 +29,13 @@ class PaymentController extends Controller
 
         $payments = $query->orderBy('created_at', 'desc')->paginate(20);
 
-        return view('dashboard.payments.index', compact('payments'));
+        // Calculate payment statistics
+        $totalPayments = Payment::count();
+        $paidPayments = Payment::where('status', 'paid')->count();
+        $pendingPayments = Payment::where('status', 'pending')->count();
+        $failedPayments = Payment::where('status', 'failed')->count();
+
+        return view('dashboard.payments.index', compact('payments', 'totalPayments', 'paidPayments', 'pendingPayments', 'failedPayments'));
     }
 
     public function show(Payment $payment)

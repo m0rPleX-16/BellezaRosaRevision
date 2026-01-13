@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
 
         // 2. Staff Users + Staff Profile
         $staffNames = ['Anna Cruz', 'Maria Santos', 'Liza Reyes'];
-        $specialties = ['hair', 'nail', 'both'];
+        $specialties = ['hair', 'nail', 'all']; // Updated: 'both' changed to 'all'
         $colors = ['#EF4444', '#3B82F6', '#10B981'];
 
         foreach ($staffNames as $i => $name) {
@@ -73,13 +73,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ServiceCategorySeeder::class,
             ServiceSeeder::class,
-            CustomerSeeder::class,    // Creates Customer records (not Users)
-            AppointmentSeeder::class,
-            AppointmentAddonSeeder::class,
-            PaymentSeeder::class,
-            InventorySeeder::class,
-            CommissionSeeder::class,  // NEW: Add this
-            // ReportDataSeeder::class, // REMOVE or fix factories first
         ]);
     }
 }

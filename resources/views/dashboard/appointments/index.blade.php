@@ -9,10 +9,6 @@
         <!-- Header -->
         <div class="flex justify-between items-center">
             <h1 class="text-3xl font-bold text-gray-900">Appointments</h1>
-            <button onclick="openBookingModal()"
-                class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-6 rounded-xl shadow-lg transform hover:-translate-y-1 transition">
-                <i class="fas fa-plus mr-2"></i> New Appointment
-            </button>
         </div>
 
         <!-- Statistics Cards -->
@@ -141,10 +137,10 @@
                                     <div class="text-gray-500">{{ $appointment->start_datetime->format('g:i A') }}</div>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <div class="font-medium text-gray-900">{{ $appointment->customer->full_name }}</div>
-                                    <div class="text-sm text-gray-500">{{ $appointment->customer->phone }}</div>
+                                    <div class="font-medium text-gray-900">{{ $appointment->customer->full_name ?? 'Deleted Customer' }}</div>
+                                    <div class="text-sm text-gray-500">{{ $appointment->customer->phone ?? 'N/A' }}</div>
                                 </td>
-                                <td class="px-4 py-3 text-sm text-gray-900">{{ $appointment->service->name }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900">{{ $appointment->service->name ?? 'Deleted Service' }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-900">
                                     {{ $appointment->staff->user->full_name ?? 'Unassigned' }}</td>
                                 <td class="px-4 py-3 text-sm font-semibold text-gray-900">
@@ -323,7 +319,7 @@
                                 <option value="">Select Staff</option>
                                 @foreach ($staff ?? [] as $staffMember)
                                     <option value="{{ $staffMember->id }}">{{ $staffMember->user->full_name }}
-                                        ({{ ucfirst($staffMember->specialty) }})
+                                        ({{ $staffMember->formatted_specialty }})
                                     </option>
                                 @endforeach
                             </select>

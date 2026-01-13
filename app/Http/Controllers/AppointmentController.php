@@ -128,7 +128,11 @@ class AppointmentController extends Controller
         }
 
         // Default sorting: newest first
-        $appointments = $query->orderBy('start_datetime', 'desc')->paginate(20);
+        // Filter out appointments with missing relationships (orphaned data)
+        $appointments = $query->whereHas('customer')
+            ->whereHas('service')
+            ->orderBy('start_datetime', 'desc')
+            ->paginate(20);
 
         // Keep the query string in pagination links
         $appointments->appends(request()->query());
@@ -179,13 +183,33 @@ class AppointmentController extends Controller
         $services = Service::where('is_active', true)->with('category')->get();
         $servicesByCategory = $services->groupBy('category.name');
 
+        // Get pre-filled values from query parameters (for customer booking from staff page)
+        $prefilledServiceId = request()->get('service_id');
+        $prefilledStaffId = request()->get('staff_id');
+        
+        // Fetch the actual service and staff objects if IDs are provided
+        $prefilledService = null;
+        $prefilledStaff = null;
+        
+        if ($prefilledServiceId) {
+            $prefilledService = Service::find($prefilledServiceId);
+        }
+        
+        if ($prefilledStaffId) {
+            $prefilledStaff = Staff::with('user')->find($prefilledStaffId);
+        }
+
         // Check if the request is from customer or admin
         if (request()->routeIs('customer.*')) {
             return view('customer.appointments.create', compact(
                 'customers',
                 'services',
                 'staff',
-                'servicesByCategory'
+                'servicesByCategory',
+                'prefilledServiceId',
+                'prefilledStaffId',
+                'prefilledService',
+                'prefilledStaff'
             ));
         }
 
@@ -232,6 +256,18 @@ class AppointmentController extends Controller
     }
     public function store(Request $request)
     {
+        // Handle both start_datetime (combined) and appointment_date + appointment_time (separate)
+        $startDatetime = null;
+        
+        if ($request->has('start_datetime') && $request->start_datetime) {
+            $startDatetime = $request->start_datetime;
+        } elseif ($request->has('appointment_date') && $request->has('appointment_time')) {
+            // Combine date and time
+            $startDatetime = $request->appointment_date . ' ' . $request->appointment_time;
+        }
+        
+        $request->merge(['start_datetime' => $startDatetime]);
+        
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'service_id' => 'required|exists:services,id',
@@ -379,15 +415,27 @@ class AppointmentController extends Controller
         $request->validate([
             'staff_id' => 'required|exists:staff,id',
             'date' => 'required|date',
+            'service_id' => 'nullable|exists:services,id',
         ]);
 
         $staffId = $request->staff_id;
         $selectedDate = $request->date;
+        $serviceId = $request->service_id;
         
-        // Get salon working hours (you may need to adjust this based on your implementation)
-        $openingTime = '09:00';
-        $closingTime = '18:00';
-        $interval = 30; // minutes
+        // Get salon settings
+        $salonSettings = SalonSetting::getSettings();
+        $openingTime = $salonSettings->opening_time ?? '09:00:00';
+        $closingTime = $salonSettings->closing_time ?? '20:00:00';
+        $interval = $salonSettings->slot_interval_minutes ?? 30;
+        
+        // Get service duration if service_id is provided
+        $serviceDuration = 60; // Default 60 minutes
+        if ($serviceId) {
+            $service = Service::find($serviceId);
+            if ($service) {
+                $serviceDuration = max($service->duration_minutes, 30); // Minimum 30 minutes
+            }
+        }
         
         // Get existing appointments for the selected staff and date
         $appointments = Appointment::where('staff_id', $staffId)
@@ -395,21 +443,30 @@ class AppointmentController extends Controller
             ->whereNotIn('status', ['cancelled', 'no_show'])
             ->get(['start_datetime', 'end_datetime']);
         
-        // Generate time slots
+        // Generate time slots based on service duration
         $start = Carbon::parse($selectedDate . ' ' . $openingTime);
         $end = Carbon::parse($selectedDate . ' ' . $closingTime);
         $timeSlots = [];
         
         while ($start->lt($end)) {
-            $slotEnd = $start->copy()->addMinutes($interval);
+            // Calculate when the appointment would end
+            $appointmentEnd = $start->copy()->addMinutes($serviceDuration);
+            
+            // Skip if appointment would end after closing time
+            if ($appointmentEnd->gt($end)) {
+                $start->addMinutes($interval);
+                continue;
+            }
+            
             $isAvailable = true;
             
-            // Check if the time slot is available
+            // Check if the time slot conflicts with existing appointments
             foreach ($appointments as $appt) {
                 $apptStart = Carbon::parse($appt->start_datetime);
                 $apptEnd = Carbon::parse($appt->end_datetime);
                 
-                if ($start->lt($apptEnd) && $slotEnd->gt($apptStart)) {
+                // Check for overlap: new appointment overlaps with existing one
+                if ($start->lt($apptEnd) && $appointmentEnd->gt($apptStart)) {
                     $isAvailable = false;
                     break;
                 }

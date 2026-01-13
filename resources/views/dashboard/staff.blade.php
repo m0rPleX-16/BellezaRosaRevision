@@ -14,7 +14,7 @@
                 </div>
                 <div class="bg-green-100 text-green-800 px-4 py-2 rounded-xl font-medium">
                     <i class="fas fa-star mr-2"></i>
-                    {{ ucfirst(auth()->user()->staff->specialty) }} Specialist
+                    {{ auth()->user()->staff->formatted_specialty }} Specialist
                 </div>
             </div>
         </div>

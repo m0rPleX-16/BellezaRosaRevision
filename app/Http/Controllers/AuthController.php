@@ -48,10 +48,18 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
+        // Update last login timestamp
+        $user->last_login_at = now();
+        $user->save();
+
         // Redirect based on role
-        if ($user->role === 'admin' || $user->role === 'staff') {
+        if ($user->role === 'admin') {
             return redirect()->intended(route('dashboard.index'));
-        }   
+        }
+        
+        if ($user->role === 'staff') {
+            return redirect()->intended(route('staff.dashboard'));
+        }
 
         // Redirect customers to their dashboard
         return redirect()->intended(route('customer.dashboard'));
@@ -77,6 +85,11 @@ class AuthController extends Controller
         ]);
 
         Auth::login($user);
+
+        // Redirect customers to their dashboard, others to home
+        if ($user->role === 'customer') {
+            return redirect()->route('customer.dashboard')->with('success', 'Welcome! Your account has been created.');
+        }
 
         return redirect()->route('home')->with('success', 'Welcome! Your account has been created.');
     }

@@ -1,15 +1,15 @@
 @extends('layouts.dashboard')
 
-@section('title', 'User Management - Belleza Rosa')
+@section('title', 'Manage Staff - Belleza Rosa')
 
 @section('content')
     <div class="space-y-6">
         <!-- Header -->
         <div class="flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-gray-900">Users</h1>
+            <h1 class="text-3xl font-bold text-gray-900">Manage Staff</h1>
             <button onclick="openAddUserModal()"
                 class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-3 px-6 rounded-xl shadow-lg transform hover:-translate-y-1 transition">
-                <i class="fas fa-user-plus mr-2"></i> Add User
+                <i class="fas fa-user-plus mr-2"></i> Add Staff
             </button>
         </div>
         <!-- Statistics -->
@@ -122,24 +122,12 @@
                                             <i class="fas fa-eye"></i>
                                         </a>
 
-                                        <!-- Role Dropdown -->
+                                        <!-- Toggle Active Status -->
                                         @php
                                             $isLastAdmin = $user->isAdmin() && $users->where('role', 'admin')->where('is_active', true)->count() <= 1;
+                                            $hasAppointments = $user->staff && $user->staff->appointments()->count() > 0;
                                         @endphp
-                                        <form action="{{ route('dashboard.users.role', $user) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <select name="role" onchange="this.form.submit()"
-                                                class="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                                {{ $isLastAdmin ? 'disabled' : '' }}
-                                                title="{{ $isLastAdmin ? 'Cannot change role of the last admin' : '' }}">
-                                                <option value="staff" {{ $user->role == 'staff' ? 'selected' : '' }}>Staff</option>
-                                                <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Admin</option>
-                                            </select>
-                                        </form>
-
-                                        <!-- Toggle Active Status -->
-                                        <form action="{{ route('dashboard.users.toggle', $user) }}" method="POST">
+                                        <form action="{{ route('dashboard.users.toggle', $user) }}" method="POST" class="inline">
                                             @csrf
                                             @method('PATCH')
                                             <button type="submit"
@@ -148,6 +136,20 @@
                                                 {{ $user->is_active ? 'Deactivate' : 'Activate' }}
                                             </button>
                                         </form>
+
+                                        <!-- Delete Button (only for staff, not admin) -->
+                                        @if($user->isStaff())
+                                            <form action="{{ route('dashboard.users.destroy', $user) }}" method="POST" class="inline" 
+                                                  onsubmit="return confirm('Are you sure you want to delete {{ $user->full_name }}? This action cannot be undone.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                    class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg transition {{ $hasAppointments ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                                    {{ $hasAppointments ? 'disabled title="Cannot delete staff with appointments"' : 'title="Delete Staff"' }}>
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -172,7 +174,7 @@
             <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
                 <div class="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6 rounded-t-2xl">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-2xl font-bold">Add New User</h2>
+                        <h2 class="text-2xl font-bold">Add New Staff</h2>
                         <button onclick="closeModal('addUserModal')"
                             class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2">
                             <i class="fas fa-times text-2xl"></i>
@@ -222,28 +224,26 @@
                                         class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
                                         placeholder="Phone number" value="{{ old('phone') }}">
                                 </div>
+                                <div class="form-group">
+                                    <label class="block text-gray-700 font-semibold mb-2">Gender *</label>
+                                    <select name="gender" required
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                                        <option value="">Select Gender</option>
+                                        <option value="male" {{ old('gender') == 'male' ? 'selected' : '' }}>Male</option>
+                                        <option value="female" {{ old('gender') == 'female' ? 'selected' : '' }}>Female</option>
+                                        <option value="other" {{ old('gender') == 'other' ? 'selected' : '' }}>Other</option>
+                                    </select>
+                                </div>
                             </div>
 
-                            <div class="grid md:grid-cols-2 gap-4">
-                                <div class="form-group">
-                                    <label class="block text-gray-700 font-semibold mb-2">Role *</label>
-                                    <select name="role" required
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
-                                        <option value="" disabled {{ !old('role') ? 'selected' : '' }}>Select role
-                                        </option>
-                                        <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff
-                                        </option>
-                                        <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin
-                                        </option>
-                                    </select>
-                                    <p class="text-xs text-gray-500 mt-1">Note: Only Staff and Admin can be added here. Customers register through the public registration.</p>
-                                </div>
-                                <div class="form-group">
-                                    <label class="block text-gray-700 font-semibold mb-2">Password *</label>
-                                    <input type="password" name="password" required
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
-                                        placeholder="Enter password">
-                                </div>
+                            <!-- Hidden role field (always staff) -->
+                            <input type="hidden" name="role" value="staff">
+
+                            <div class="form-group">
+                                <label class="block text-gray-700 font-semibold mb-2">Password *</label>
+                                <input type="password" name="password" required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                                    placeholder="Enter password">
                             </div>
 
                             <div class="form-group">
@@ -254,15 +254,21 @@
                             </div>
 
                             <!-- Staff Specific Fields -->
-                            <div id="staffFields" class="hidden bg-blue-50 p-4 rounded-lg">
+                            <div id="staffFields" class="bg-blue-50 p-4 rounded-lg">
                                 <h3 class="text-lg font-semibold text-blue-800 mb-3">Staff Information</h3>
                                 <div class="grid md:grid-cols-2 gap-4">
                                     <div class="form-group">
                                         <label class="block text-gray-700 font-semibold mb-2">Specialty</label>
-                                        <input type="text" name="specialty"
-                                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
-                                            placeholder="e.g., Hair Stylist, Nail Technician"
-                                            value="{{ old('specialty', 'General') }}">
+                                        <select name="specialty" required
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                                            <option value="all" {{ old('specialty', 'all') == 'all' ? 'selected' : '' }}>All Services (Hair, Nail & Spa)</option>
+                                            <option value="hair" {{ old('specialty') == 'hair' ? 'selected' : '' }}>Hair Only</option>
+                                            <option value="nail" {{ old('specialty') == 'nail' ? 'selected' : '' }}>Nail Only</option>
+                                            <option value="spa" {{ old('specialty') == 'spa' ? 'selected' : '' }}>Spa Only</option>
+                                            <option value="hair_nail" {{ old('specialty') == 'hair_nail' ? 'selected' : '' }}>Hair & Nail</option>
+                                            <option value="hair_spa" {{ old('specialty') == 'hair_spa' ? 'selected' : '' }}>Hair & Spa</option>
+                                            <option value="nail_spa" {{ old('specialty') == 'nail_spa' ? 'selected' : '' }}>Nail & Spa</option>
+                                        </select>
                                     </div>
                                     <div class="form-group">
                                         <label class="block text-gray-700 font-semibold mb-2">Color Code</label>
@@ -284,7 +290,7 @@
                             </button>
                             <button type="submit"
                                 class="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold rounded-xl shadow-lg transform hover:scale-105 transition">
-                                <i class="fas fa-user-plus mr-2"></i> Create User
+                                <i class="fas fa-user-plus mr-2"></i> Create Staff
                             </button>
                         </div>
                     </form>
@@ -311,17 +317,11 @@
                 document.getElementById(modalId).classList.add('hidden');
             }
 
-            // Toggle staff fields based on role selection
+            // Staff fields are always visible since we're always adding staff
             function toggleStaffFields() {
-                const roleSelect = document.querySelector('select[name="role"]');
                 const staffFields = document.getElementById('staffFields');
-
-                if (roleSelect && staffFields) {
-                    if (roleSelect.value === 'staff') {
-                        staffFields.classList.remove('hidden');
-                    } else {
-                        staffFields.classList.add('hidden');
-                    }
+                if (staffFields) {
+                    staffFields.classList.remove('hidden');
                 }
             }
 
@@ -342,11 +342,8 @@
 
             // Initialize event listeners when the document is ready
             document.addEventListener('DOMContentLoaded', function() {
-                // Toggle staff fields when role changes
-                const roleSelect = document.querySelector('select[name="role"]');
-                if (roleSelect) {
-                    roleSelect.addEventListener('change', toggleStaffFields);
-                }
+                // Always show staff fields since we're always adding staff
+                toggleStaffFields();
 
                 // Initialize color picker sync
                 const colorInputs = document.querySelectorAll('input[name^="color_code"]');

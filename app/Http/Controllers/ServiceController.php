@@ -23,16 +23,35 @@ class ServiceController extends Controller
 
         // Staff can only see services matching their specialty
         if ($user->isStaff() && $user->staff) {
-            $staffSpecialty = $user->staff->specialty;
-            $query->whereHas('category', function ($q) use ($staffSpecialty) {
-                $q->where('specialty', $staffSpecialty)->orWhere('specialty', 'both');
+            $staffSpecialty = $user->staff->specialty ?? 'all';
+
+            // Map staff specialty to allowed category specialties
+            $allowedBySpecialty = [
+                'hair' => ['hair', 'all'],
+                'nail' => ['nail', 'all'],
+                'spa' => ['spa', 'all'],
+                'hair_nail' => ['hair', 'nail', 'all'],
+                'hair_spa' => ['hair', 'spa', 'all'],
+                'nail_spa' => ['nail', 'spa', 'all'],
+                'all' => ['hair', 'nail', 'spa', 'all'],
+            ];
+
+            $allowed = $allowedBySpecialty[$staffSpecialty] ?? ['hair', 'nail', 'spa', 'all'];
+
+            $query->whereHas('category', function ($q) use ($allowed) {
+                $q->whereIn('specialty', $allowed);
             });
         }
 
         $services = $query->get();
         $categories = ServiceCategory::all();
 
-        return view('dashboard.services.index', compact('services', 'categories'));
+        // Group services by category
+        $servicesByCategory = $services->groupBy(function ($service) {
+            return $service->category->name ?? 'Uncategorized';
+        });
+
+        return view('dashboard.services.index', compact('services', 'categories', 'servicesByCategory'));
     }
 
     public function create()
@@ -56,7 +75,21 @@ class ServiceController extends Controller
         }
 
         $request->validate([
-            'name' => 'required|string|max:100',
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                function ($attribute, $value, $fail) use ($request) {
+                    $exists = Service::where('category_id', $request->category_id)
+                        ->where('name', $value)
+                        ->exists();
+                    if ($exists) {
+                        $category = \App\Models\ServiceCategory::find($request->category_id);
+                        $categoryName = $category ? $category->name : 'this category';
+                        $fail("A service named '{$value}' already exists in {$categoryName}. Please choose a different name.");
+                    }
+                },
+            ],
             'category_id' => 'required|exists:service_categories,id',
             'duration_minutes' => 'required|integer|min:30',
             'price_regular' => 'required|numeric|min:0',
@@ -66,16 +99,27 @@ class ServiceController extends Controller
             'duration_minutes.min' => 'Service duration must be at least 30 minutes.',
         ]);
 
-        Service::create([
-            'name' => $request->name,
-            'category_id' => $request->category_id,
-            'duration_minutes' => $request->duration_minutes,
-            'price_regular' => $request->price_regular,
-            'price_premium' => $request->price_premium,
-            'is_premium' => $request->has('is_premium'),
-            'description' => $request->description,
-            'is_active' => true,
-        ]);
+        try {
+            Service::create([
+                'name' => $request->name,
+                'category_id' => $request->category_id,
+                'duration_minutes' => $request->duration_minutes,
+                'price_regular' => $request->price_regular,
+                'price_premium' => $request->price_premium,
+                'is_premium' => $request->has('is_premium'),
+                'description' => $request->description,
+                'is_active' => true,
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() == 23000) { // Integrity constraint violation
+                $category = \App\Models\ServiceCategory::find($request->category_id);
+                $categoryName = $category ? $category->name : 'this category';
+                return back()
+                    ->withErrors(['name' => "A service named '{$request->name}' already exists in {$categoryName}. Please choose a different name."])
+                    ->withInput();
+            }
+            throw $e;
+        }
 
         return redirect()->route('dashboard.services.index')
             ->with('success', 'Service created successfully!');

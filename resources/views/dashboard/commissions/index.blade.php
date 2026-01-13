@@ -145,7 +145,7 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="font-medium text-gray-900">{{ $commission->staff->user->full_name }}</div>
-                                    <div class="text-sm text-gray-500">{{ ucfirst($commission->staff->specialty) }}</div>
+                                    <div class="text-sm text-gray-500">{{ $commission->staff->formatted_specialty }}</div>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900">
                                     {{ $commission->appointment->service->name }}

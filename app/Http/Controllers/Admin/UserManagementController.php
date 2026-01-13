@@ -49,6 +49,11 @@ class UserManagementController extends Controller
             'role' => 'required|in:admin,staff' // Only allow admin and staff
         ]);
 
+        // Prevent changing staff to admin (only one admin allowed - Nina)
+        if ($user->isStaff() && $request->role === 'admin') {
+            return back()->withErrors(['role' => 'Cannot change staff to admin. Only one admin is allowed in the system.']);
+        }
+
         // Prevent removing the last admin
         if ($user->isAdmin() && $request->role !== 'admin') {
             $adminCount = User::where('role', 'admin')->where('is_active', true)->count();
@@ -80,7 +85,8 @@ class UserManagementController extends Controller
             'username' => 'required|string|max:50|alpha_dash|unique:users,username',
             'email' => 'required|string|email|max:255|unique:users,email',
             'phone' => 'nullable|string|max:20|regex:/^[0-9\-\+\(\)\s]+$/',
-            'role' => 'required|in:admin,staff', // Only allow admin and staff
+            'gender' => 'required|in:male,female,other',
+            'role' => 'required|in:staff', // Only allow staff (admin cannot be created through this form)
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -90,6 +96,7 @@ class UserManagementController extends Controller
             'username' => $validated['username'],
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
+            'gender' => $validated['gender'],
             'role' => $validated['role'],
             'password' => bcrypt($validated['password']),
             'is_active' => true,
@@ -97,10 +104,21 @@ class UserManagementController extends Controller
 
         // If the user is staff, create a staff record
         if ($validated['role'] === 'staff') {
+            // Validate specialty to ensure it's one of the allowed enum values
+            $specialty = $request->input('specialty', 'all');
+            $allowedSpecialties = ['hair', 'nail', 'spa', 'hair_nail', 'hair_spa', 'nail_spa', 'all'];
+            if (!in_array($specialty, $allowedSpecialties)) {
+                $specialty = 'all'; // Default to 'all' if invalid
+            }
+
+            // Get color code from color_code_display or color_code input, or generate random
+            $colorCode = $request->input('color_code_display') 
+                ?: $request->input('color_code') 
+                ?: '#' . substr(md5(rand()), 0, 6);
+
             $staffData = [
-                'specialty' => $request->input('specialty', 'General'),
-                'color_code' => $request->input('color_code', '#' . substr(md5(rand()), 0, 6)),
-                'is_available' => true,
+                'specialty' => $specialty,
+                'color_code' => $colorCode,
             ];
             
             // Create staff record with the provided or default values
@@ -134,5 +152,46 @@ class UserManagementController extends Controller
         $status = $user->is_active ? 'activated' : 'deactivated';
 
         return back()->with('success', "User {$status} successfully!");
+    }
+
+    /**
+     * Delete a user (staff only, cannot delete admin)
+     */
+    public function destroy(User $user)
+    {
+        /** @var User $currentUser */
+        $currentUser = Auth::user();
+        if (!$currentUser || !$currentUser->isAdmin()) {
+            abort(403, 'Unauthorized access.');
+        }
+
+        // Prevent deleting admin users
+        if ($user->isAdmin()) {
+            return back()->withErrors(['delete' => 'Cannot delete admin users.']);
+        }
+
+        // Prevent deleting the last active admin (safety check)
+        if ($user->isAdmin()) {
+            $adminCount = User::where('role', 'admin')->where('is_active', true)->count();
+            if ($adminCount <= 1) {
+                return back()->withErrors(['delete' => 'Cannot delete the last active admin.']);
+            }
+        }
+
+        // Check if user has appointments
+        if ($user->staff && $user->staff->appointments()->count() > 0) {
+            return back()->withErrors(['delete' => 'Cannot delete staff member with existing appointments. Please deactivate instead.']);
+        }
+
+        // Delete staff record if exists (cascade will handle it, but being explicit)
+        if ($user->staff) {
+            $user->staff->delete();
+        }
+
+        // Delete the user
+        $user->delete();
+
+        return redirect()->route('dashboard.users.index')
+            ->with('success', 'Staff member deleted successfully!');
     }
 }
