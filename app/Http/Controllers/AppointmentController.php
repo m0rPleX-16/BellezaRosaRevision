@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\AppointmentAddon;
 use App\Models\Customer;
 use App\Models\Service;
 use App\Models\Staff;
@@ -68,7 +69,7 @@ class AppointmentController extends Controller
 
         // Get upcoming appointments (scheduled, confirmed, in_progress - future appointments)
         $upcomingAppointments = $customer->appointments()
-            ->with(['service', 'staff'])
+            ->with(['service', 'staff', 'addons'])
             ->whereIn('status', ['scheduled', 'confirmed', 'in_progress'])
             ->where('start_datetime', '>=', now())
             ->orderBy('start_datetime', 'asc')
@@ -76,7 +77,7 @@ class AppointmentController extends Controller
 
         // Get past appointments (completed or past dates, excluding cancelled/failed/no_show)
         $pastAppointments = $customer->appointments()
-            ->with(['service', 'staff'])
+            ->with(['service', 'staff', 'addons'])
             ->where(function ($query) {
                 $query->where('status', 'completed')
                     ->orWhere(function ($q) {
@@ -91,21 +92,21 @@ class AppointmentController extends Controller
 
         // Get cancelled appointments (cancelled status)
         $cancelledAppointments = $customer->appointments()
-            ->with(['service', 'staff'])
+            ->with(['service', 'staff', 'addons'])
             ->where('status', 'cancelled')
             ->orderBy('start_datetime', 'desc')
             ->paginate(10);
 
         // Get failed appointments (failed status)
         $failedAppointments = $customer->appointments()
-            ->with(['service', 'staff'])
+            ->with(['service', 'staff', 'addons'])
             ->where('status', 'failed')
             ->orderBy('start_datetime', 'desc')
             ->paginate(10);
 
         // Get no-show appointments (no_show status)
         $noShowAppointments = $customer->appointments()
-            ->with(['service', 'staff'])
+            ->with(['service', 'staff', 'addons'])
             ->where('status', 'no_show')
             ->orderBy('start_datetime', 'desc')
             ->paginate(10);
@@ -122,7 +123,7 @@ class AppointmentController extends Controller
     public function index()
     {
         // Start with the base query
-        $query = Appointment::with(['customer', 'service', 'staff.user', 'payment']);
+        $query = Appointment::with(['customer', 'service', 'staff.user', 'payment', 'addons']);
 
         // Staff can only view their own appointments
         /** @var \App\Models\User $user */
@@ -210,6 +211,13 @@ class AppointmentController extends Controller
         $services = Service::where('is_active', true)->with('category')->get();
         $servicesByCategory = $services->groupBy('category.name');
 
+        // Get salon settings for admin create form
+        $salonSettings = SalonSetting::getSettings();
+        $openingTime = $salonSettings->opening_time;
+        $closingTime = $salonSettings->closing_time;
+        $maxDaysAhead = $salonSettings->max_days_book_ahead;
+        $slotInterval = $salonSettings->slot_interval_minutes;
+
         // Get pre-filled values from query parameters (for customer booking from staff page)
         $prefilledServiceId = request()->get('service_id');
         $prefilledStaffId = request()->get('staff_id');
@@ -240,19 +248,23 @@ class AppointmentController extends Controller
             ));
         }
 
-        // Default to admin dashboard view
+        // Default to admin dashboard view with all required variables
         return view('dashboard.appointments.create', compact(
             'customers',
             'services',
             'staff',
-            'servicesByCategory'
+            'servicesByCategory',
+            'openingTime',
+            'closingTime',
+            'maxDaysAhead',
+            'slotInterval'
         ));
     }
 
     public function show(Appointment $appointment)
     {
         // Load relationships
-        $appointment->load(['customer', 'service', 'staff.user', 'payment']);
+        $appointment->load(['customer', 'service', 'staff.user', 'payment', 'addons']);
         
         // Check if this is a customer route - ensure customer can only view their own appointments
         if (request()->routeIs('customer.*')) {
@@ -270,6 +282,8 @@ class AppointmentController extends Controller
         // For admin/staff routes, check permissions
         /** @var \App\Models\User $user */
         $user = Auth::user();
+        
+        // Admin can view any appointment, staff can only view their own
         if ($user->isStaff() && $appointment->staff_id !== $user->staff->id) {
             abort(403, 'You can only view your own appointments.');
         }
@@ -335,6 +349,30 @@ class AppointmentController extends Controller
             'start_datetime' => 'required|date|after_or_equal:today',
         ]);
 
+        // Validate addon data if present
+        $addonRules = [];
+        
+        foreach ($request->all() as $key => $value) {
+            if (str_starts_with($key, 'addon_service_') && !empty($value)) {
+                $addonId = substr($key, 14);
+                $nameKey = "addon_name_{$addonId}";
+                $priceKey = "addon_price_{$addonId}";
+                
+                if ($value === 'custom') {
+                    // Custom addon validation
+                    $addonRules[$nameKey] = 'required|string|max:100';
+                    $addonRules[$priceKey] = 'required|numeric|min:0|max:99999.99';
+                } else {
+                    // Service-based addon validation
+                    $addonRules[$key] = 'required|exists:services,id';
+                }
+            }
+        }
+        
+        if (!empty($addonRules)) {
+            $request->validate($addonRules);
+        }
+
         // Get salon settings
         $salonSettings = SalonSetting::getSettings();
 
@@ -361,24 +399,24 @@ class AppointmentController extends Controller
 
         // Get service duration
         $service = Service::findOrFail($request->service_id);
-        $duration = $service->duration_minutes;
+        $baseDuration = $service->duration_minutes;
 
         // Minimum duration check
-        if ($duration < 30) {
+        if ($baseDuration < 30) {
             return back()->withErrors([
                 'service_id' => 'Service duration must be at least 30 minutes.'
             ]);
         }
 
         // Check staff availability (proper overlap detection)
-        if (!$this->isStaffAvailable($request->staff_id, $request->start_datetime, $duration)) {
+        if (!$this->isStaffAvailable($request->staff_id, $request->start_datetime, $baseDuration)) {
             return back()->withErrors([
                 'start_datetime' => 'Staff is not available for the selected time slot. Please choose another time.'
             ]);
         }
 
         // Calculate end time
-        $endDateTime = $startDateTime->copy()->addMinutes($duration);
+        $endDateTime = $startDateTime->copy()->addMinutes($baseDuration);
 
         // Ensure appointment doesn't exceed closing time
         $closingTimeToday = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $salonSettings->closing_time);
@@ -431,12 +469,59 @@ class AppointmentController extends Controller
             ]);
         }
 
+        // Calculate total duration including addons
+        $addonTotal = 0;
+        $addonDurationTotal = 0;
+        
+        // Process addons
+        $addons = [];
+        foreach ($request->all() as $key => $value) {
+            if (str_starts_with($key, 'addon_service_') && !empty($value)) {
+                $addonId = substr($key, 14); // Remove 'addon_service_' prefix
+                $nameKey = "addon_name_{$addonId}";
+                $priceKey = "addon_price_{$addonId}";
+                
+                if ($value === 'custom') {
+                    // Custom addon - no duration impact
+                    if ($request->has($nameKey) && $request->has($priceKey) && 
+                        is_numeric($request->input($priceKey)) && !empty($request->input($nameKey))) {
+                        $addonPrice = (float) $request->input($priceKey);
+                        $addonTotal += $addonPrice;
+                        
+                        $addons[] = [
+                            'service_id' => null,
+                            'name' => $request->input($nameKey),
+                            'price' => $addonPrice,
+                        ];
+                    }
+                } else {
+                    // Service-based addon - includes duration
+                    $addonService = Service::find($value);
+                    if ($addonService) {
+                        $addonPrice = $addonService->price_premium ?? $addonService->price_regular;
+                        $addonTotal += $addonPrice;
+                        $addonDurationTotal += $addonService->duration_minutes;
+                        
+                        $addons[] = [
+                            'service_id' => $addonService->id,
+                            'name' => $addonService->name,
+                            'price' => $addonPrice,
+                        ];
+                    }
+                }
+            }
+        }
+        
+        $totalAmount = $service->price_premium ?? $service->price_regular + $addonTotal;
+        $totalDuration = $baseDuration + $addonDurationTotal;
+        $endDateTime = Carbon::parse($request->start_datetime)->addMinutes($totalDuration);
+
         // Create appointment within a database transaction
         try {
             DB::beginTransaction();
 
             // Double-check availability right before creating (race condition prevention)
-            if (!$this->isStaffAvailable($request->staff_id, $request->start_datetime, $duration)) {
+            if (!$this->isStaffAvailable($request->staff_id, $request->start_datetime, $totalDuration)) {
                 DB::rollBack();
                 return back()->withErrors([
                     'start_datetime' => 'This time slot was just booked by another customer. Please select another time.'
@@ -449,10 +534,22 @@ class AppointmentController extends Controller
                 'staff_id' => $request->staff_id,
                 'start_datetime' => $request->start_datetime,
                 'end_datetime' => $endDateTime,
-                'total_amount' => $service->price_premium ?? $service->price_regular,
+                'total_amount' => $totalAmount,
                 'status' => 'scheduled',
                 'notes' => $request->notes ?? null,
             ]);
+            
+            // Create addons if any
+            if (!empty($addons)) {
+                foreach ($addons as $addon) {
+                    AppointmentAddon::create([
+                        'appointment_id' => $appointment->id,
+                        'service_id' => $addon['service_id'],
+                        'name' => $addon['name'],
+                        'price' => $addon['price'],
+                    ]);
+                }
+            }
 
             DB::commit();
 
@@ -488,10 +585,10 @@ class AppointmentController extends Controller
         ]);
 
         $service = Service::findOrFail($request->service_id);
-        $duration = $service->duration_minutes;
+        $baseDuration = $service->duration_minutes;
 
         // Minimum duration check (30 minutes)
-        if ($duration < 30) {
+        if ($baseDuration < 30) {
             return back()->withErrors([
                 'service_id' => 'Service duration must be at least 30 minutes.'
             ]);
@@ -511,15 +608,15 @@ class AppointmentController extends Controller
             ]);
         }
 
-        // Check staff availability, excluding the current appointment itself
-        if (!$this->isStaffAvailable($request->staff_id, $request->start_datetime, $duration, $appointment->id)) {
+        // Check staff availability, excluding current appointment itself
+        if (!$this->isStaffAvailable($request->staff_id, $request->start_datetime, $baseDuration, $appointment->id)) {
             return back()->withErrors([
-                'start_datetime' => 'Staff is not available for the selected time slot. Please choose another time.'
+                'start_datetime' => 'Staff is not available for selected time slot. Please choose another time.'
             ]);
         }
 
         // Calculate end time and ensure it doesn't exceed closing time
-        $endDateTime = $startDateTime->copy()->addMinutes($duration);
+        $endDateTime = $startDateTime->copy()->addMinutes($baseDuration);
         $closingTimeToday = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $salonSettings->closing_time);
         if ($endDateTime->gt($closingTimeToday)) {
             return back()->withErrors([
@@ -601,6 +698,8 @@ class AppointmentController extends Controller
                 'staff_id' => 'required|exists:staff,id',
                 'date' => 'required|date',
                 'service_id' => 'nullable|exists:services,id',
+                'addon_services' => 'nullable|array',
+                'addon_services.*' => 'nullable|integer',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -638,13 +737,29 @@ class AppointmentController extends Controller
             }
             
             // Get service duration if service_id is provided
-            $serviceDuration = 60; // Default 60 minutes
+            $baseServiceDuration = 60; // Default 60 minutes
             if ($serviceId) {
                 $service = Service::find($serviceId);
                 if ($service) {
-                    $serviceDuration = max($service->duration_minutes, 30); // Minimum 30 minutes
+                    $baseServiceDuration = max($service->duration_minutes, 30); // Minimum 30 minutes
                 }
             }
+            
+            // Calculate addon duration if provided
+            $addonDurationTotal = 0;
+            if ($request->has('addon_services') && is_array($request->addon_services)) {
+                foreach ($request->addon_services as $addonServiceId) {
+                    if ($addonServiceId && $addonServiceId !== 'custom') {
+                        $addonService = Service::find($addonServiceId);
+                        if ($addonService) {
+                            $addonDurationTotal += $addonService->duration_minutes;
+                        }
+                    }
+                }
+            }
+            
+            // Total duration for availability checking
+            $serviceDuration = $baseServiceDuration + $addonDurationTotal;
             
             // Get staff schedules for this day of the week
             $staffSchedules = StaffSchedule::where('staff_id', $staffId)

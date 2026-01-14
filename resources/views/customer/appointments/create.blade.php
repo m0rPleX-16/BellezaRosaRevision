@@ -5,7 +5,7 @@
     <!-- Back Navigation -->
     <div class="max-w-6xl mx-auto px-4 mb-4">
         <a href="{{ route('customer.appointments.index') }}" 
-           class="inline-flex items-center text-gray-600 hover:text-pink-600 transition-colors text-sm">
+           class="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors text-sm">
             <i class="fas fa-arrow-left mr-2"></i>
             Back to Appointments
         </a>
@@ -79,7 +79,7 @@
                                 <i class="fas fa-spa text-[var(--primary)] mr-1"></i>Service <span class="text-red-500">*</span>
                             </label>
                             <select name="service_id" id="service_id" required
-                                class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
+                                class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-gray-300 focus:ring focus:ring-gray-200 focus:ring-opacity-50 transition-all">
                                 <option value="">Choose service...</option>
                                 @foreach ($services as $service)
                                     <option value="{{ $service->id }}"
@@ -100,7 +100,7 @@
                                 <i class="fas fa-user text-[var(--gold)] mr-1"></i>Staff <span class="text-red-500">*</span>
                             </label>
                             <select name="staff_id" id="staff_id" required
-                                class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
+                                class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-gray-300 focus:ring focus:ring-gray-200 focus:ring-opacity-50 transition-all">
                                 <option value="">Choose staff...</option>
                                 @foreach ($staff as $staffMember)
                                     <option value="{{ $staffMember->id }}">
@@ -130,7 +130,7 @@
                                id="appointment_date"
                                min="{{ now()->format('Y-m-d') }}"
                                required
-                               class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
+                               class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-gray-300 focus:ring focus:ring-gray-200 focus:ring-opacity-50 transition-all">
                         @error('appointment_date')
                             <p class="mt-1 text-xs text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                         @enderror
@@ -173,9 +173,15 @@
 
                 <!-- Available Time Slots (Compact) -->
                 <div id="available-times-container" class="mb-6 hidden">
-                    <label class="block text-xs font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-clock text-blue-500 mr-1"></i>Available Time Slots
-                    </label>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-semibold text-gray-700">
+                            <i class="fas fa-clock text-blue-500 mr-1"></i>Available Time Slots
+                        </label>
+                        <div id="duration-indicator" class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full hidden">
+                            <i class="fas fa-hourglass-half mr-1"></i>
+                            <span id="duration-text">Calculating...</span>
+                        </div>
+                    </div>
                     <div id="available-times-grid" class="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
                         <!-- Time slots dynamically inserted here -->
                     </div>
@@ -189,6 +195,27 @@
                 <input type="hidden" name="appointment_time" id="appointment_time" value="">
                 <input type="hidden" name="start_datetime" id="start_datetime" value="">
 
+                <!-- Addons Section -->
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="text-xs font-semibold text-gray-700">
+                            <i class="fas fa-plus-circle text-purple-500 mr-1"></i>Additional Services (Optional)
+                        </label>
+                        <button type="button" id="add-addon-btn" 
+                                class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1 rounded-lg transition-colors">
+                            <i class="fas fa-plus mr-1"></i>Add Service
+                        </button>
+                    </div>
+                    
+                    <div id="addons-container" class="space-y-2">
+                        <!-- Addons will be dynamically added here -->
+                    </div>
+                    
+                    <div id="no-addons-message" class="text-xs text-gray-500 text-center py-3 bg-gray-50 rounded-lg border border-gray-200">
+                        No additional services added
+                    </div>
+                </div>
+
                 <!-- Notes (Compact) -->
                 <div class="mb-6">
                     <label for="notes" class="block text-xs font-semibold text-gray-700 mb-2">
@@ -196,7 +223,7 @@
                     </label>
                     <textarea name="notes" id="notes" rows="2"
                         placeholder="Any special requests or notes..."
-                        class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all resize-none"></textarea>
+                        class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-gray-300 focus:ring focus:ring-gray-200 focus:ring-opacity-50 transition-all resize-none"></textarea>
                 </div>
 
             </div>
@@ -238,6 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let serviceDuration, servicePrice, servicePricePremium, serviceName, staffName;
     let isLoadingTimeSlots = false;
     let hasNoTimeSlots = false;
+    let addonCount = 0;
 
     if (isPrefilled) {
         serviceDuration = document.getElementById('service_duration')?.value;
@@ -252,6 +280,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     dateInput?.addEventListener('change', fetchTimeSlots);
+    
+    // Addon functionality
+    const addAddonBtn = document.getElementById('add-addon-btn');
+    const addonsContainer = document.getElementById('addons-container');
+    const noAddonsMessage = document.getElementById('no-addons-message');
+    
+    addAddonBtn?.addEventListener('click', function() {
+        addAddonField();
+        // Refresh time slots after adding addon
+        setTimeout(fetchTimeSlots, 100);
+    });
+    
+    // Listen for addon changes to refresh time slots
+    document.addEventListener('change', function(e) {
+        if (e.target.name && e.target.name.startsWith('addon_service_')) {
+            setTimeout(fetchTimeSlots, 100);
+        }
+    });
 
     // Form validation
     document.getElementById('appointmentForm')?.addEventListener('submit', function(e) {
@@ -299,6 +345,27 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('date', selectedDate);
         formData.append('staff_id', staffId);
         formData.append('service_id', serviceId);
+        
+        // Add addon services to availability check
+        const addonServices = [];
+        document.querySelectorAll('[name^="addon_service_"]').forEach(input => {
+            if (input.value && input.value !== 'custom') {
+                addonServices.push(input.value);
+            }
+        });
+        
+        addonServices.forEach((addonId, index) => {
+            formData.append(`addon_services[${index}]`, addonId);
+        });
+        
+        // Show duration indicator
+        const durationIndicator = document.getElementById('duration-indicator');
+        const durationText = document.getElementById('duration-text');
+        if (durationIndicator && durationText) {
+            durationIndicator.classList.remove('hidden');
+            const totalAddons = addonServices.length;
+            durationText.textContent = totalAddons > 0 ? `${totalAddons} addon(s)` : 'Base service only';
+        }
 
         fetch(checkAvailabilityUrl, {
             method: 'POST',
@@ -457,10 +524,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateSummary() {
+        let basePrice = 0;
+        let baseDuration = 0;
+        
         if (isPrefilled) {
-            // Update price display in header
-            const price = parseFloat(servicePricePremium || servicePrice || 0);
-            document.getElementById('price-summary').textContent = `₱${price.toFixed(2)}`;
+            basePrice = parseFloat(servicePricePremium || servicePrice || 0);
+            baseDuration = parseInt(serviceDuration) || 0;
             
             // Update duration display
             const durationDisplay = document.getElementById('duration-display');
@@ -469,10 +538,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             const selectedService = serviceSelect?.options[serviceSelect.selectedIndex];
-            
-            // Update price display in header
-            const price = selectedService?.dataset?.pricePremium || selectedService?.dataset?.price || '0';
-            document.getElementById('price-summary').textContent = `₱${parseFloat(price).toFixed(2)}`;
+            basePrice = parseFloat(selectedService?.dataset?.pricePremium || selectedService?.dataset?.price || '0');
+            baseDuration = parseInt(selectedService?.dataset?.duration) || 0;
             
             // Update duration display
             const durationDisplay = document.getElementById('duration-display');
@@ -480,7 +547,139 @@ document.addEventListener('DOMContentLoaded', function() {
                 durationDisplay.textContent = `${selectedService.dataset.duration} min`;
             }
         }
+        
+        // Calculate addon prices and durations
+        let addonTotal = 0;
+        let addonDurationTotal = 0;
+        const addonInputs = document.querySelectorAll('input[name^="addon_price_"]');
+        addonInputs.forEach(input => {
+            addonTotal += parseFloat(input.value) || 0;
+        });
+        
+        // Calculate addon durations from selected services
+        const addonSelects = document.querySelectorAll('select[name^="addon_service_"]');
+        addonSelects.forEach(select => {
+            if (select.value && select.value !== 'custom') {
+                const selectedOption = select.options[select.selectedIndex];
+                const duration = parseInt(selectedOption?.dataset?.duration) || 0;
+                addonDurationTotal += duration;
+            }
+        });
+        
+        const totalPrice = basePrice + addonTotal;
+        const totalDuration = baseDuration + addonDurationTotal;
+        
+        // Update price display
+        document.getElementById('price-summary').textContent = `₱${totalPrice.toFixed(2)}`;
+        
+        // Update duration display with total
+        const durationDisplay = document.getElementById('duration-display');
+        if (durationDisplay) {
+            if (addonDurationTotal > 0) {
+                durationDisplay.textContent = `${totalDuration} min (base: ${baseDuration}min + addons: ${addonDurationTotal}min)`;
+            } else {
+                durationDisplay.textContent = `${totalDuration} min`;
+            }
+        }
     }
+    
+    function addAddonField() {
+        addonCount++;
+        
+        const addonDiv = document.createElement('div');
+        addonDiv.className = 'flex gap-2 items-center p-3 bg-purple-50 border border-purple-200 rounded-lg';
+        addonDiv.id = `addon-${addonCount}`;
+        
+        addonDiv.innerHTML = `
+            <select name="addon_service_${addonCount}" 
+                    id="addon_service_${addonCount}"
+                    class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50 transition-all">
+                <option value="">Choose service...</option>
+                @foreach ($services as $service)
+                    <option value="{{ $service->id }}" 
+                            data-price="{{ $service->price_premium ?? $service->price_regular }}"
+                            data-name="{{ $service->name }}"
+                            data-duration="{{ $service->duration_minutes }}">
+                        {{ $service->name }} - ₱{{ number_format($service->price_premium ?? $service->price_regular, 2) }} ({{ $service->duration_minutes }}min)
+                    </option>
+                @endforeach
+                <option value="custom">-- Custom Service --</option>
+            </select>
+            <input type="text" 
+                   name="addon_name_${addonCount}" 
+                   id="addon_name_${addonCount}"
+                   placeholder="Custom service name" 
+                   class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50 transition-all hidden">
+            <input type="number" 
+                   name="addon_price_${addonCount}" 
+                   id="addon_price_${addonCount}"
+                   placeholder="Price" 
+                   step="0.01" 
+                   min="0"
+                   class="w-24 px-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50 transition-all"
+                   onchange="updateSummary()">
+            <button type="button" 
+                    onclick="removeAddon(${addonCount})"
+                    class="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors">
+                <i class="fas fa-trash text-sm"></i>
+            </button>
+        `;
+        
+        addonsContainer.appendChild(addonDiv);
+        noAddonsMessage.style.display = 'none';
+        
+        // Add event listeners for service selection
+        const serviceSelect = addonDiv.querySelector(`#addon_service_${addonCount}`);
+        const nameInput = addonDiv.querySelector(`#addon_name_${addonCount}`);
+        const priceInput = addonDiv.querySelector(`#addon_price_${addonCount}`);
+        
+        serviceSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            
+            if (this.value === 'custom') {
+                // Show custom inputs
+                nameInput.classList.remove('hidden');
+                nameInput.required = true;
+                priceInput.required = true;
+                priceInput.value = '';
+                nameInput.value = '';
+            } else if (this.value) {
+                // Hide custom inputs and auto-fill from service
+                nameInput.classList.add('hidden');
+                nameInput.required = false;
+                priceInput.required = false;
+                priceInput.value = selectedOption.dataset.price;
+                nameInput.value = selectedOption.dataset.name;
+            } else {
+                // No selection
+                nameInput.classList.add('hidden');
+                nameInput.required = false;
+                priceInput.required = false;
+                priceInput.value = '';
+                nameInput.value = '';
+            }
+            
+            updateSummary();
+        });
+        
+        // Add event listener for price changes
+        priceInput.addEventListener('input', updateSummary);
+    }
+    
+    function removeAddon(id) {
+        const addonDiv = document.getElementById(`addon-${id}`);
+        if (addonDiv) {
+            addonDiv.remove();
+            updateSummary();
+            
+            if (addonsContainer.children.length === 0) {
+                noAddonsMessage.style.display = 'block';
+            }
+        }
+    }
+    
+    // Make removeAddon globally available
+    window.removeAddon = removeAddon;
 
     // Initial update
     updateSummary();

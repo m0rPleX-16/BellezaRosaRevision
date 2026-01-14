@@ -142,10 +142,18 @@
                 aria-current="{{ request()->is('dashboard') ? 'page' : 'false' }}">
                 <i class="fas fa-home mr-3"></i> Dashboard
             </a>
-            <a class="nav-item {{ request()->is('dashboard/appointments*') ? 'active' : '' }}"
+            <a class="nav-item {{ request()->is('dashboard/appointments*') ? 'active' : '' }} relative"
                 href="{{ route('dashboard.appointments.index') }}"
                 aria-current="{{ request()->is('dashboard/appointments*') ? 'page' : 'false' }}">
                 <i class="fas fa-calendar-check mr-3"></i> Appointments
+                @php
+                    $todayAppointments = \App\Models\Appointment::whereDate('created_at', '=', today())->count();
+                @endphp
+                @if($todayAppointments > 0)
+                    <span class="absolute top-2 right-4 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                        {{ $todayAppointments > 9 ? '9+' : $todayAppointments }}
+                    </span>
+                @endif
             </a>
 
             <a class="nav-item {{ request()->is('dashboard/payments*') ? 'active' : '' }}"

@@ -166,7 +166,13 @@
                                 <td class="px-4 py-3 text-sm text-gray-900 hidden lg:table-cell">
                                     {{ $appointment->staff->user->full_name ?? 'Unassigned' }}</td>
                                 <td class="px-4 py-3 text-sm font-semibold text-gray-900 hidden sm:table-cell">
-                                    ₱{{ number_format($appointment->total_amount, 2) }}</td>
+                                    ₱{{ number_format($appointment->total_amount, 2) }}
+                                    @if($appointment->addons && $appointment->addons->count() > 0)
+                                        <div class="text-xs text-purple-600 font-normal">
+                                            +{{ $appointment->addons->count() }} addon{{ $appointment->addons->count() > 1 ? 's' : '' }}
+                                        </div>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     <span
                                         class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusPill[$appointment->status] ?? 'bg-gray-100 text-gray-700 ring-gray-600/20' }}">

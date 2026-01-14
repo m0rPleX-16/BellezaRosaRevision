@@ -56,7 +56,7 @@
             'border' => 'border-gray-200',
             'icon' => 'fa-user-slash',
             'label' => 'No Show'
-        ],
+        ]
     ];
     
     $status = $statusConfig[$appointment->status ?? 'scheduled'] ?? $statusConfig['scheduled'];
@@ -121,6 +121,12 @@
                             <i class="fas fa-clock mr-1.5 text-gray-400"></i>
                             {{ $duration }}
                         </span>
+                        @if($appointment->addons && $appointment->addons->count() > 0)
+                            <span class="flex items-center text-purple-600">
+                                <i class="fas fa-plus-circle mr-1.5 text-purple-500"></i>
+                                {{ $appointment->addons->count() }} addon{{ $appointment->addons->count() > 1 ? 's' : '' }}
+                            </span>
+                        @endif
                         <span class="text-gray-400">{{ $timeRelative }}</span>
                     </div>
                 </div>
@@ -154,7 +160,7 @@
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Amount</p>
-                    <p class="font-semibold text-pink-600">₱{{ number_format($appointment->total_amount ?? 0, 2) }}</p>
+                    <p class="font-semibold text-gray-900">₱{{ number_format($appointment->total_amount ?? 0, 2) }}</p>
                 </div>
             </div>
         </div>

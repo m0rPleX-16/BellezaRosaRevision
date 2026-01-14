@@ -31,6 +31,13 @@ class Appointment extends Model
         'cancelled_at'   => 'datetime', // New cast
     ];
 
+    protected $appends = [
+        'base_price',
+        'addons_total',
+        'formatted_base_price',
+        'formatted_addons_total',
+    ];
+
     public function customer()
     {
         return $this->belongsTo(Customer::class);
@@ -113,5 +120,55 @@ class Appointment extends Model
         if ($this->payment) {
             $this->payment->update(['status' => 'failed']);
         }
+    }
+
+    /**
+     * Get the base service price (without addons)
+     */
+    public function getBasePriceAttribute(): float
+    {
+        return $this->service ? ($this->service->price_premium ?? $this->service->price_regular) : 0;
+    }
+
+    /**
+     * Get the total addons price
+     */
+    public function getAddonsTotalAttribute(): float
+    {
+        return $this->addons->sum('price');
+    }
+
+    /**
+     * Check if appointment has any addons
+     */
+    public function hasAddons(): bool
+    {
+        return $this->addons->count() > 0;
+    }
+
+    /**
+     * Get formatted base price
+     */
+    public function getFormattedBasePriceAttribute(): string
+    {
+        return '₱' . number_format($this->base_price, 2);
+    }
+
+    /**
+     * Get formatted addons total
+     */
+    public function getFormattedAddonsTotalAttribute(): string
+    {
+        return '₱' . number_format($this->addons_total, 2);
+    }
+
+    /**
+     * Recalculate total amount based on service and addons
+     */
+    public function recalculateTotalAmount(): void
+    {
+        $this->update([
+            'total_amount' => $this->base_price + $this->addons_total
+        ]);
     }
 }

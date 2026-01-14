@@ -51,7 +51,7 @@
             ],
             'cancelled' => [
                 'color' => 'red',
-                'gradient' => 'from-red-500 to-rose-600',
+                'gradient' => 'from-red-500 to-red-600',
                 'bg' => 'bg-red-50',
                 'text' => 'text-red-700',
                 'border' => 'border-red-200',
@@ -188,6 +188,135 @@
                         <i class="fas fa-sticky-note mr-2"></i>Special Requests / Notes
                     </h3>
                     <p class="text-gray-700">{{ $appointment->notes }}</p>
+                </div>
+            @endif
+
+            <!-- Addons Section -->
+            @if($appointment->addons && $appointment->addons->count() > 0)
+                <div class="bg-purple-50 rounded-xl p-4 mb-6 border border-purple-200">
+                    <h3 class="text-sm font-semibold text-purple-700 uppercase tracking-wide mb-3">
+                        <i class="fas fa-plus-circle mr-2"></i>Additional Services
+                    </h3>
+                    
+                    <!-- Compact Addons List with Duration -->
+                    <div class="space-y-2 mb-3">
+                        @foreach($appointment->addons as $index => $addon)
+                            <div class="flex justify-between items-center p-3 bg-white rounded-lg border border-purple-200">
+                                <div class="flex items-center flex-1">
+                                    @if($addon->isServiceAddon())
+                                        <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-spa text-white text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">{{ $addon->display_name }}</div>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span class="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">Salon Service</span>
+                                                @if($addon->service && $addon->service->duration_minutes > 0)
+                                                    <span class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                                                        <i class="fas fa-clock mr-1"></i>{{ $addon->service->duration_minutes }} min
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="w-8 h-8 bg-gradient-to-br from-gray-500 to-gray-600 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-plus-circle text-white text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">{{ $addon->display_name }}</div>
+                                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Custom Addon</span>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold text-purple-600">{{ $addon->formatted_price }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    
+                    <!-- Duration Summary -->
+                    <div class="bg-purple-100 rounded-lg p-3 border border-purple-200">
+                        <div class="text-sm font-medium text-purple-800 mb-2">
+                            <i class="fas fa-clock mr-2"></i>Duration Breakdown
+                        </div>
+                        <div class="space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-700">{{ $appointment->service->name }}:</span>
+                                <span class="font-medium">{{ $appointment->service->duration_minutes }} min</span>
+                            </div>
+                            @if($appointment->addons->where('service_id', '!=', null)->count() > 0)
+                                @foreach($appointment->addons->where('service_id', '!=', null) as $addon)
+                                    @if($addon->service && $addon->service->duration_minutes > 0)
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 text-xs pl-4">{{ $addon->service->name }}:</span>
+                                            <span class="font-medium text-xs">+{{ $addon->service->duration_minutes }} min</span>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            @endif
+                            <div class="flex justify-between pt-2 border-t border-purple-200 mt-2">
+                                <span class="font-semibold text-purple-800">Total Duration:</span>
+                                <span class="font-bold text-purple-800">
+                                    {{ \Carbon\Carbon::parse($appointment->start_datetime)->diffInMinutes(\Carbon\Carbon::parse($appointment->end_datetime)) }} min
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Compact Pricing Breakdown -->
+                    <div class="bg-white rounded-lg p-3 border border-purple-300">
+                        <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                            <i class="fas fa-calculator mr-1"></i>Pricing Breakdown
+                        </h4>
+                        <div class="space-y-2">
+                            <!-- Base Service -->
+                            <div class="flex justify-between items-center py-1 border-b border-gray-100">
+                                <div class="flex items-center">
+                                    <div class="w-6 h-6 bg-blue-100 rounded flex items-center justify-center mr-2">
+                                        <i class="fas fa-cut text-blue-600 text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">Base Service</div>
+                                        <div class="text-xs text-gray-500">{{ $appointment->service->name }}</div>
+                                    </div>
+                                </div>
+                                <div class="text-sm font-bold text-blue-900">{{ $appointment->formatted_base_price }}</div>
+                            </div>
+                            
+                            <!-- Addons -->
+                            @if($appointment->addons->count() > 0)
+                                <div class="flex justify-between items-center py-1 border-b border-gray-100">
+                                    <div class="flex items-center">
+                                        <div class="w-6 h-6 bg-purple-100 rounded flex items-center justify-center mr-2">
+                                            <i class="fas fa-plus text-purple-600 text-xs"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900">Addons ({{ $appointment->addons->count() }})</div>
+                                            <div class="text-xs text-gray-500">Additional services</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm font-bold text-purple-700">{{ $appointment->formatted_addons_total }}</div>
+                                </div>
+                            @endif
+                            
+                            <!-- Total -->
+                            <div class="flex justify-between items-center py-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded px-3">
+                                <div class="flex items-center">
+                                    <div class="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-600 rounded flex items-center justify-center mr-2">
+                                        <i class="fas fa-receipt text-white text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-gray-900">Total</div>
+                                        <div class="text-xs text-gray-600">Base + Addons</div>
+                                    </div>
+                                </div>
+                                <div class="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                                    ₱{{ number_format($appointment->total_amount, 2) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             @endif
 
