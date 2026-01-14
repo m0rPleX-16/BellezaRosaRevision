@@ -73,6 +73,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ServiceCategorySeeder::class,
             ServiceSeeder::class,
+            InventorySeeder::class,
         ]);
     }
 }

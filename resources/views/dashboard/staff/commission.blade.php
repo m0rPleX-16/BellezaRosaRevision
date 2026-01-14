@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+@extends('layouts.staff')
 
 @section('title', 'My Commissions - ' . config('app.name'))
 

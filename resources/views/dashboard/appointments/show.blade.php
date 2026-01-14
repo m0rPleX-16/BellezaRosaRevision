@@ -1,13 +1,13 @@
-@extends('layouts.staff')
+@extends('layouts.dashboard')
 
-@section('title', 'Appointment Details - Staff Dashboard')
+@section('title', 'Appointment Details - Belleza Rosa')
 
 @section('content')
 <div class="space-y-6">
     <!-- Header -->
     <div class="flex justify-between items-center">
         <h1 class="text-3xl font-bold text-gray-900">Appointment Details</h1>
-        <a href="{{ route('staff.appointments') }}" class="text-sm text-blue-600 hover:text-blue-800">
+        <a href="{{ route('dashboard.appointments.index') }}" class="text-sm text-blue-600 hover:text-blue-800">
             &larr; Back to Appointments
         </a>
     </div>
@@ -23,6 +23,7 @@
                 'completed' => 'bg-purple-100 text-purple-800 border-purple-200',
                 'cancelled' => 'bg-red-100 text-red-800 border-red-200',
                 'no_show' => 'bg-gray-100 text-gray-800 border-gray-200',
+                'failed' => 'bg-red-100 text-red-800 border-red-200',
             ];
             $statusColor = $statusColors[$appointment->status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
             $appointmentDate = \Carbon\Carbon::parse($appointment->start_datetime);
@@ -68,11 +69,11 @@
                                 <label class="block text-sm font-medium text-gray-500">Phone</label>
                                 <p class="mt-1 text-base text-gray-900">{{ $appointment->customer->phone ?? 'N/A' }}</p>
                             </div>
-                            @if($appointment->customer->email)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-500">Email</label>
-                                <p class="mt-1 text-base text-gray-900">{{ $appointment->customer->email }}</p>
-                            </div>
+                            @if(!empty($appointment->customer?->email))
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-500">Email</label>
+                                    <p class="mt-1 text-base text-gray-900">{{ $appointment->customer->email }}</p>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -86,6 +87,10 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-500">Service</label>
                                 <p class="mt-1 text-base text-gray-900">{{ $appointment->service->name ?? 'N/A' }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500">Staff</label>
+                                <p class="mt-1 text-base text-gray-900">{{ $appointment->staff->user->full_name ?? 'Unassigned' }}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500">Duration</label>
@@ -112,78 +117,76 @@
 
             <!-- Notes Section -->
             @if(!empty($appointment->notes))
-            <div class="mt-6 pt-6 border-t border-gray-200">
-                <h3 class="text-sm font-medium text-gray-500 mb-2">Special Requests / Notes</h3>
-                <p class="text-base text-gray-900">{{ $appointment->notes }}</p>
-            </div>
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Special Requests / Notes</h3>
+                    <p class="text-base text-gray-900">{{ $appointment->notes }}</p>
+                </div>
+            @endif
+
+            <!-- Cancellation Reason -->
+            @if(!empty($appointment->cancellation_reason))
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Cancellation Reason</h3>
+                    <p class="text-base text-gray-900">{{ $appointment->cancellation_reason }}</p>
+                </div>
             @endif
 
             <!-- Payment Information -->
             @if($appointment->payment)
-            <div class="mt-6 pt-6 border-t border-gray-200">
-                <h3 class="text-sm font-medium text-gray-500 mb-2">Payment Information</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Amount</label>
-                        <p class="mt-1 text-base text-gray-900">₱{{ number_format($appointment->payment->amount, 2) }}</p>
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Payment Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Amount</label>
+                            <p class="mt-1 text-base text-gray-900">₱{{ number_format($appointment->payment->amount, 2) }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Method</label>
+                            <p class="mt-1 text-base text-gray-900">{{ ucfirst($appointment->payment->method ?? 'N/A') }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500">Status</label>
+                            <p class="mt-1 text-base text-gray-900">{{ ucfirst($appointment->payment->status ?? 'N/A') }}</p>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Method</label>
-                        <p class="mt-1 text-base text-gray-900">{{ ucfirst($appointment->payment->method ?? 'N/A') }}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500">Status</label>
-                        <p class="mt-1 text-base text-gray-900">{{ ucfirst($appointment->payment->status ?? 'N/A') }}</p>
+
+                    <div class="mt-4 flex flex-wrap gap-3">
+                        <a href="{{ route('dashboard.payments.show', $appointment->payment) }}"
+                           class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium">
+                            <i class="fas fa-credit-card mr-2"></i>View Payment
+                        </a>
+                        @if(method_exists($appointment->payment, 'isPaid') && !$appointment->payment->isPaid())
+                            <a href="{{ route('dashboard.payments.edit', $appointment->payment) }}"
+                               class="inline-flex items-center px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-800 text-white text-sm font-medium">
+                                <i class="fas fa-edit mr-2"></i>Edit Payment
+                            </a>
+                        @endif
                     </div>
                 </div>
-            </div>
             @endif
 
-            <!-- Status Update Actions -->
+            <!-- Actions -->
             <div class="mt-8 pt-6 border-t border-gray-200">
-                <h3 class="text-sm font-medium text-gray-500 mb-4">Update Status</h3>
                 <div class="flex flex-wrap gap-3">
-                    @if(in_array($appointment->status, ['scheduled', 'confirmed']))
-                        <form action="{{ route('dashboard.appointments.status', $appointment) }}" method="POST" class="inline">
-                            @csrf
-                            <input type="hidden" name="status" value="in_progress">
-                            <button type="submit" 
-                                    onclick="return confirm('Mark this appointment as in progress?');"
-                                    class="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md">
-                                <i class="fas fa-play-circle mr-2"></i>Start Appointment
-                            </button>
-                        </form>
-                    @endif
-
-                    @if($appointment->status === 'in_progress')
-                        <form action="{{ route('dashboard.appointments.status', $appointment) }}" method="POST" class="inline">
-                            @csrf
-                            <input type="hidden" name="status" value="completed">
-                            <button type="submit" 
-                                    onclick="return confirm('Mark this appointment as completed?');"
-                                    class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md">
-                                <i class="fas fa-check-circle mr-2"></i>Mark as Completed
-                            </button>
-                        </form>
-                    @endif
-
-                    @if(in_array($appointment->status, ['scheduled', 'confirmed', 'in_progress']))
-                        <form action="{{ route('dashboard.appointments.status', $appointment) }}" method="POST" class="inline">
-                            @csrf
-                            <input type="hidden" name="status" value="no_show">
-                            <button type="submit" 
-                                    onclick="return confirm('Mark this appointment as no-show?');"
-                                    class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md">
-                                <i class="fas fa-times-circle mr-2"></i>Mark as No-Show
-                            </button>
-                        </form>
+                    @if($appointment->status === 'completed')
+                        @if($appointment->payment)
+                            <a href="{{ route('dashboard.payments.show', $appointment->payment) }}"
+                               class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium">
+                                <i class="fas fa-receipt mr-2"></i>Payment Details
+                            </a>
+                        @else
+                            <a href="{{ route('dashboard.payments.create', ['appointment' => $appointment->id]) }}"
+                               class="inline-flex items-center px-4 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium">
+                                <i class="fas fa-money-bill-wave mr-2"></i>Record Payment
+                            </a>
+                        @endif
                     @endif
                 </div>
             </div>
 
             <!-- Back Button -->
             <div class="mt-6">
-                <a href="{{ route('staff.appointments') }}" 
+                <a href="{{ route('dashboard.appointments.index') }}"
                    class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Appointments
                 </a>
@@ -192,3 +195,4 @@
     </div>
 </div>
 @endsection
+

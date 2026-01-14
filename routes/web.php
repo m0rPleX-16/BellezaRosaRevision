@@ -16,6 +16,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\StaffScheduleController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -105,6 +106,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/commission', [StaffController::class, 'commissionReport'])->name('commission');
         Route::post('/service-report', [StaffController::class, 'submitServiceReport'])->name('service-report');
         Route::get('/statistics', [StaffController::class, 'getStatistics'])->name('statistics');
+        
+        // Weekly Schedule routes
+        Route::get('/schedule', [StaffScheduleController::class, 'index'])->name('schedule');
+        Route::post('/schedule', [StaffScheduleController::class, 'store'])->name('schedule.store');
+        Route::get('/schedule/{schedule}', [StaffScheduleController::class, 'show'])->name('schedule.show');
+        Route::put('/schedule/{schedule}', [StaffScheduleController::class, 'update'])->name('schedule.update');
+        Route::delete('/schedule/{schedule}', [StaffScheduleController::class, 'destroy'])->name('schedule.destroy');
     });
 
     // Admin-only routes

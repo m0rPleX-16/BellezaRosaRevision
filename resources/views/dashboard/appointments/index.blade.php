@@ -3,12 +3,24 @@
 @section('title', 'Appointments - Belleza Rosa')
 
 @section('content')
+    @php
+        $statusPill = [
+            'scheduled' => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+            'confirmed' => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+            'in_progress' => 'bg-amber-50 text-amber-800 ring-amber-600/20',
+            'completed' => 'bg-slate-100 text-slate-700 ring-slate-600/20',
+            'cancelled' => 'bg-rose-50 text-rose-700 ring-rose-600/20',
+            'failed' => 'bg-red-50 text-red-700 ring-red-600/20',
+            'no_show' => 'bg-orange-50 text-orange-700 ring-orange-600/20',
+        ];
+    @endphp
     <div class="space-y-6" data-appointments-store="{{ route('dashboard.appointments.store') }}"
         data-opening-time="{{ substr($openingTime, 0, 5) }}" data-closing-time="{{ substr($closingTime, 0, 5) }}"
         data-max-days-ahead="{{ $maxDaysAhead }}" data-slot-interval="{{ $slotInterval }}">
         <!-- Header -->
-        <div class="flex justify-between items-center">
+        <div class="flex flex-col gap-1">
             <h1 class="text-3xl font-bold text-gray-900">Appointments</h1>
+            <p class="text-sm text-gray-500">Manage bookings, update statuses, and record payments.</p>
         </div>
 
         <!-- Statistics Cards -->
@@ -71,13 +83,18 @@
                 class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div class="flex flex-col md:flex-row gap-4 flex-1">
                     <!-- Search Input -->
-                    <input type="text" name="search" value="{{ request('search') }}"
-                        placeholder="Search by name, phone, or service..."
-                        class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none w-full md:w-64">
+                    <div class="relative w-full md:w-80">
+                        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                            <i class="fas fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" name="search" value="{{ request('search') }}"
+                            placeholder="Search name, phone, service..."
+                            class="w-full px-10 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                    </div>
 
                     <!-- Status Filter -->
                     <select name="status"
-                        class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                        class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none md:w-48">
                         <option value="">All Status</option>
                         <option value="scheduled" {{ request('status') == 'scheduled' ? 'selected' : '' }}>Scheduled
                         </option>
@@ -92,20 +109,25 @@
                     </select>
 
                     <!-- Date Filter -->
-                    <input type="date" name="date" value="{{ request('date') }}"
-                        class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                    <div class="relative md:w-48">
+                        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                            <i class="fas fa-calendar"></i>
+                        </span>
+                        <input type="date" name="date" value="{{ request('date') }}"
+                            class="w-full px-10 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                    </div>
                 </div>
 
                 <!-- Filter and Clear Buttons -->
                 <div class="flex gap-2">
                     <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition">
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition focus:outline-none focus:ring-4 focus:ring-blue-200">
                         <i class="fas fa-filter mr-2"></i> Apply Filters
                     </button>
 
                     @if (request()->hasAny(['search', 'status', 'date']))
                         <a href="{{ route('dashboard.appointments.index') }}"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-xl transition">
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-xl transition focus:outline-none focus:ring-4 focus:ring-gray-200">
                             <i class="fas fa-times mr-2"></i> Clear
                         </a>
                     @endif
@@ -118,12 +140,12 @@
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
-                        <tr class="bg-blue-600 text-white">
+                        <tr class="bg-blue-600 text-white sticky top-0 z-10">
                             <th class="px-4 py-3 text-left text-sm font-semibold">Date & Time</th>
                             <th class="px-4 py-3 text-left text-sm font-semibold">Customer</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold">Service</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold">Staff</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold">Amount</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold hidden lg:table-cell">Service</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold hidden lg:table-cell">Staff</th>
+                            <th class="px-4 py-3 text-left text-sm font-semibold hidden sm:table-cell">Amount</th>
                             <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
                             <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
                         </tr>
@@ -140,34 +162,34 @@
                                     <div class="font-medium text-gray-900">{{ $appointment->customer->full_name ?? 'Deleted Customer' }}</div>
                                     <div class="text-sm text-gray-500">{{ $appointment->customer->phone ?? 'N/A' }}</div>
                                 </td>
-                                <td class="px-4 py-3 text-sm text-gray-900">{{ $appointment->service->name ?? 'Deleted Service' }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900">
+                                <td class="px-4 py-3 text-sm text-gray-900 hidden lg:table-cell">{{ $appointment->service->name ?? 'Deleted Service' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 hidden lg:table-cell">
                                     {{ $appointment->staff->user->full_name ?? 'Unassigned' }}</td>
-                                <td class="px-4 py-3 text-sm font-semibold text-gray-900">
+                                <td class="px-4 py-3 text-sm font-semibold text-gray-900 hidden sm:table-cell">
                                     ₱{{ number_format($appointment->total_amount, 2) }}</td>
                                 <td class="px-4 py-3">
                                     <span
-                                        class="text-xs font-semibold
-                                {{ $appointment->status == 'scheduled' ? 'text-blue-600' : '' }}
-                                {{ $appointment->status == 'confirmed' ? 'text-green-600' : '' }}
-                                {{ $appointment->status == 'in_progress' ? 'text-yellow-600' : '' }}
-                                {{ $appointment->status == 'completed' ? 'text-gray-600' : '' }}
-                                {{ $appointment->status == 'cancelled' ? 'text-red-600' : '' }}
-                                {{ $appointment->status == 'failed' ? 'text-red-800' : '' }}
-                                {{ $appointment->status == 'no_show' ? 'text-orange-600' : '' }}">
+                                        class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusPill[$appointment->status] ?? 'bg-gray-100 text-gray-700 ring-gray-600/20' }}">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70"></span>
                                         {{ str_replace('_', ' ', ucfirst($appointment->status)) }}
                                     </span>
                                     @if ($appointment->cancellation_reason)
-                                        <br><span class="text-xs text-gray-500 italic"
+                                        <div class="mt-1 text-xs text-gray-500 italic"
                                             title="{{ $appointment->cancellation_reason }}">
                                             Reason: {{ Str::limit($appointment->cancellation_reason, 30) }}
-                                        </span>
+                                        </div>
                                     @endif
                                 </td>
 
                                 <!-- Actions Column -->
                                 <td class="px-4 py-3">
-                                    <div class="flex space-x-3 items-center">
+                                    <div class="flex flex-wrap gap-2 items-center">
+                                        <!-- View -->
+                                        <a href="{{ route('dashboard.appointments.show', $appointment) }}"
+                                            class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+                                            title="View Appointment">
+                                            <i class="fas fa-eye mr-2"></i>View
+                                        </a>
 
                                         <!-- Status Update -->
                                         <form action="{{ route('dashboard.appointments.status', $appointment) }}"
@@ -176,7 +198,7 @@
                                             <select name="status" data-old-value="{{ $appointment->status }}"
                                                 data-appointment-id="{{ $appointment->id }}"
                                                 onchange="confirmStatusChange(this)"
-                                                class="text-xs font-semibold rounded-lg px-3 py-1 bg-blue-600 text-white focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                                class="text-xs font-semibold rounded-lg px-3 py-1.5 bg-blue-600 text-white focus:outline-none focus:ring-4 focus:ring-blue-200">
                                                 <option value="scheduled"
                                                     {{ $appointment->status == 'scheduled' ? 'selected' : '' }}>Scheduled
                                                 </option>
@@ -203,17 +225,18 @@
 
                                         <!-- Edit -->
                                         <a href="{{ route('dashboard.appointments.edit', $appointment) }}"
-                                            class="text-blue-600 hover:text-blue-800 transition" title="Edit Appointment">
-                                            <i class="fas fa-edit"></i>
+                                            class="inline-flex items-center justify-center rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100"
+                                            title="Edit Appointment">
+                                            <i class="fas fa-pen-to-square mr-2"></i>Edit
                                         </a>
 
                                         <!-- Cancel Appointment Button (only if not already cancelled or failed) -->
                                         @if (!$appointment->isCancelled() && !$appointment->isFailed())
                                             <a href="{{ route('dashboard.appointments.cancel.form', $appointment) }}"
-                                                class="text-red-600 hover:text-red-800 transition"
+                                                class="inline-flex items-center justify-center rounded-lg border border-rose-100 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100"
                                                 title="Cancel Appointment"
                                                 onclick="return confirmCancelAppointment(event)">
-                                                <i class="fas fa-times-circle text-lg"></i>
+                                                <i class="fas fa-ban mr-2"></i>Cancel
                                             </a>
                                         @endif
 
@@ -222,24 +245,25 @@
                                             @if ($appointment->payment && $appointment->payment->isPaid())
                                                 <!-- View Payment Details -->
                                                 <a href="{{ route('dashboard.payments.show', $appointment->payment) }}"
-                                                    class="text-indigo-600 hover:text-indigo-800 transition"
+                                                    class="inline-flex items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-100"
                                                     title="View Payment Details">
-                                                    <i class="fas fa-credit-card"></i>
+                                                    <i class="fas fa-credit-card mr-2"></i>Payment
                                                 </a>
                                             @else
                                                 <!-- Create New Payment -->
                                                 <a href="{{ route('dashboard.payments.create', ['appointment' => $appointment->id]) }}"
-                                                    class="text-green-600 hover:text-green-800 transition"
+                                                    class="inline-flex items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100"
                                                     title="Record Payment">
-                                                    <i class="fas fa-money-bill-wave"></i>
+                                                    <i class="fas fa-money-bill-wave mr-2"></i>Record
                                                 </a>
                                             @endif
                                         @endif
 
                                         <!-- Paid Indicator -->
                                         @if ($appointment->payment && $appointment->payment->isPaid())
-                                            <span class="text-green-600 font-bold" title="Fully Paid">
-                                                <i class="fas fa-check-circle"></i>
+                                            <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+                                                title="Fully Paid">
+                                                <i class="fas fa-check-circle"></i> Paid
                                             </span>
                                         @endif
 
@@ -280,10 +304,8 @@
                 </div>
             </div>
             <div class="p-6">
-                <form action="{{ route('dashboard.appointments.store') }}" method="POST">
-                    data-toast="true"
-                    data-toast-message="Appointment created successfully!"
-                    data-toast-type="success">
+                <form action="{{ route('dashboard.appointments.store') }}" method="POST" data-toast="true"
+                    data-toast-message="Appointment created successfully!" data-toast-type="success">
                     @csrf
                     <div class="grid md:grid-cols-2 gap-4">
                         <div class="form-group">
@@ -357,7 +379,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // Status change configurations
         const statusConfig = {

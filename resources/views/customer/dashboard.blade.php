@@ -1,208 +1,144 @@
-<!-- resources/views/customer/dashboard.blade.php -->
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto px-4 py-8">
-        <div class="flex flex-col md:flex-row gap-8">
-            <!-- Left sidebar navigation -->
-            <div class="w-full md:w-1/4">
-                <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                    <h2 class="text-xl font-semibold mb-4">My Account</h2>
-                    <nav class="space-y-2">
-                        <a href="{{ route('customer.dashboard') }}"
-                            class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 {{ request()->routeIs('customer.dashboard') ? 'bg-blue-50 text-blue-600' : 'text-gray-700' }}">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            Dashboard
-                        </a>
-                        <a href="{{ route('customer.appointments.index') }}"
-                            class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 {{ request()->routeIs('customer.appointments.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-700' }}">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            My Appointments
-                            @php
-                                $upcomingCount = auth()
-                                    ->user()
-                                    ->customer->appointments()
-                                    ->whereIn('status', ['scheduled', 'confirmed'])
-                                    ->where('start_datetime', '>=', now())
-                                    ->count();
-                            @endphp
-                            @if ($upcomingCount > 0)
-                                <span
-                                    class="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                                    {{ $upcomingCount }}
-                                </span>
-                            @endif
-                        </a>
-                        <a href="{{ route('customer.staff') }}"
-                            class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 {{ request()->routeIs('customer.staff') ? 'bg-blue-50 text-blue-600' : 'text-gray-700' }}">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                            Spa Receptionist
-                        </a>
-                        <a href="{{ route('customer.profile.edit') }}"
-                            class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 {{ request()->routeIs('profile.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-700' }}">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            Profile Settings
-                        </a>
-                    </nav>
-                </div>
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    <div class="flex flex-col md:flex-row gap-8">
+        <!-- Sidebar -->
+        @include('customer.partials.sidebar')
 
-                <!-- Quick Stats Card -->
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h3 class="font-medium text-gray-900 mb-4">Appointment Stats</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Upcoming</span>
-                            <span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                                {{ $upcomingCount }}
-                            </span>
-                        </div>
-                        @php
-                            $completedCount = auth()
-                                ->user()
-                                ->customer->appointments()
-                                ->where('status', 'completed')
-                                ->count();
-                        @endphp
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Completed</span>
-                            <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                {{ $completedCount }}
-                            </span>
-                        </div>
-                    </div>
+        <!-- Main Content -->
+        <div class="flex-1 min-w-0">
+            <!-- Welcome Banner -->
+            <div class="bg-gradient-to-r from-pink-500 via-rose-500 to-orange-400 rounded-3xl p-8 mb-8 text-white relative overflow-hidden">
+                <div class="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div class="absolute left-1/2 bottom-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2"></div>
+                <div class="relative z-10">
+                    <h1 class="text-3xl font-bold mb-2">Welcome back, {{ auth()->user()->first_name ?? auth()->user()->name }}! 👋</h1>
+                    <p class="text-pink-100 text-lg mb-6">Ready for your next relaxation session?</p>
+                    <a href="{{ route('customer.staff') }}" 
+                       class="inline-flex items-center px-6 py-3 bg-white text-pink-600 rounded-xl font-semibold hover:bg-pink-50 transition-colors shadow-lg">
+                        <i class="fas fa-calendar-plus mr-2"></i>
+                        Book an Appointment
+                    </a>
                 </div>
             </div>
 
-            <!-- Main content -->
-            <div class="flex-1">
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <div class="flex justify-between items-center mb-6">
-                        <h1 class="text-2xl font-bold text-gray-900">Welcome back, {{ auth()->user()->name }}!</h1>
-                    </div>
+            <!-- Upcoming Appointments Section -->
+            @php
+                $customer = auth()->user()->customer ?? null;
+                
+                $upcomingAppointments = collect();
+                $upcomingCount = 0;
+                
+                if ($customer) {
+                    $upcomingAppointments = $customer->appointments()
+                        ->with(['service', 'staff.user'])
+                        ->whereIn('status', ['scheduled', 'confirmed'])
+                        ->where('start_datetime', '>=', now())
+                        ->orderBy('start_datetime', 'asc')
+                        ->take(3)
+                        ->get();
+                    
+                    $upcomingCount = $customer->appointments()
+                        ->whereIn('status', ['scheduled', 'confirmed'])
+                        ->where('start_datetime', '>=', now())
+                        ->count();
+                }
+            @endphp
 
-                    <!-- Upcoming Appointments Preview -->
-                    @php
-                        $upcomingAppointments = auth()
-                            ->user()
-                            ->customer->appointments()
-                            ->with(['service', 'staff'])
-                            ->whereIn('status', ['scheduled', 'confirmed'])
-                            ->where('start_datetime', '>=', now())
-                            ->orderBy('start_datetime', 'asc')
-                            ->take(3)
-                            ->get();
-                    @endphp
-
-                    <div class="mb-8">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold text-gray-900">Upcoming Appointments</h2>
-                            @if ($upcomingCount > 3)
-                                <a href="{{ route('customer.appointments.index') }}"
-                                    class="text-sm text-blue-600 hover:text-blue-800">View All</a>
-                            @endif
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+                <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3">
+                            <i class="fas fa-calendar-alt text-white"></i>
                         </div>
-
-                        @if ($upcomingAppointments->count() > 0)
-                            <div class="space-y-4">
-                                @foreach ($upcomingAppointments as $appointment)
-                                    @include('customer.appointments.partials.appointment-card', [
-                                        'appointment' => $appointment,
-                                    ])
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="text-center py-8 bg-gray-50 rounded-lg">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
-                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900">No upcoming appointments</h3>
-                                <p class="mt-1 text-sm text-gray-500">Get started by booking a new appointment.</p>
-                            </div>
-                        @endif
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900">Upcoming Appointments</h2>
+                            <p class="text-sm text-gray-500">Your next scheduled visits</p>
+                        </div>
                     </div>
+                    @if ($upcomingCount > 3)
+                        <a href="{{ route('customer.appointments.index') }}" 
+                           class="text-sm text-pink-600 hover:text-pink-700 font-medium flex items-center">
+                            View All <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    @endif
+                </div>
 
-                    <!-- Quick Actions -->
+                <div class="p-6">
+                    @if ($upcomingAppointments->count() > 0)
+                        <div class="space-y-4">
+                            @foreach ($upcomingAppointments as $appointment)
+                                @include('customer.appointments.partials.appointment-card', [
+                                    'appointment' => $appointment,
+                                ])
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-12">
+                            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-calendar-times text-3xl text-gray-400"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-2">No Upcoming Appointments</h3>
+                            <p class="text-gray-500 mb-6">You don't have any appointments scheduled yet.</p>
+                            <a href="{{ route('customer.staff') }}" 
+                               class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-medium hover:shadow-lg transition-all">
+                                <i class="fas fa-plus mr-2"></i>
+                                Book Your First Appointment
+                            </a>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Quick Actions Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- Book Appointment Card -->
+                <a href="{{ route('customer.staff') }}" 
+                   class="group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-pink-200 hover:shadow-md transition-all">
+                    <div class="w-14 h-14 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-plus text-white text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-1">Book New Appointment</h3>
+                    <p class="text-sm text-gray-500">Schedule your next spa visit</p>
+                </a>
+
+                <!-- View All Appointments Card -->
+                <a href="{{ route('customer.appointments.index') }}" 
+                   class="group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all">
+                    <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-list text-white text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-1">View All Appointments</h3>
+                    <p class="text-sm text-gray-500">Manage your bookings</p>
+                </a>
+
+                <!-- Profile Settings Card -->
+                <a href="{{ route('customer.profile.edit') }}" 
+                   class="group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all">
+                    <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-user-cog text-white text-xl"></i>
+                    </div>
+                    <h3 class="font-semibold text-gray-900 mb-1">Profile Settings</h3>
+                    <p class="text-sm text-gray-500">Update your information</p>
+                </a>
+            </div>
+
+            <!-- Recent Activity / Tips Section -->
+            <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-100">
+                <div class="flex items-start">
+                    <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                        <i class="fas fa-lightbulb text-white text-xl"></i>
+                    </div>
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <a href="{{ route('customer.appointments.create') }}"
-                                class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                                <div class="flex items-center">
-                                    <div
-                                        class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24"
-                                            stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 4v16m8-8H4" />
-                                        </svg>
-                                    </div>
-                                    <div class="ml-4">
-                                        <h3 class="text-sm font-medium text-gray-900">Book New Appointment</h3>
-                                        <p class="text-sm text-gray-500">Schedule your next visit</p>
-                                    </div>
-                                </div>
-                            </a>
-                            <a href="{{ route('customer.appointments.index') }}"
-                                class="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                                <div class="flex items-center">
-                                    <div
-                                        class="flex-shrink-0 h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                                        <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24"
-                                            stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                        </svg>
-                                    </div>
-                                    <div class="ml-4">
-                                        <h3 class="text-sm font-medium text-gray-900">View All Appointments</h3>
-                                        <p class="text-sm text-gray-500">Manage your bookings</p>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
+                        <h3 class="font-semibold text-gray-900 mb-1">Spa Tip of the Day</h3>
+                        <p class="text-gray-600 text-sm">
+                            Stay hydrated before and after your spa treatments for the best results. Drinking water helps your body flush out toxins and enhances the benefits of your massage therapy.
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 @endsection
-
-@push('styles')
-    <style>
-        /* Custom scrollbar for the sidebar */
-        .sidebar-nav {
-            scrollbar-width: thin;
-            scrollbar-color: #9ca3af #f3f4f6;
-        }
-
-        .sidebar-nav::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar-nav::-webkit-scrollbar-track {
-            background: #f3f4f6;
-            border-radius: 3px;
-        }
-
-        .sidebar-nav::-webkit-scrollbar-thumb {
-            background-color: #9ca3af;
-            border-radius: 3px;
-        }
-    </style>
-@endpush

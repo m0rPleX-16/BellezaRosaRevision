@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+@extends('layouts.staff')
 
 @section('title', 'My Appointments - Staff Dashboard')
 
@@ -18,9 +18,9 @@
             <!-- Search -->
             <div>
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input type="text" 
-                       name="search" 
-                       id="search" 
+                <input type="text"
+                       name="search"
+                       id="search"
                        value="{{ request('search') }}"
                        placeholder="Customer name, phone, or service"
                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
@@ -29,7 +29,7 @@
             <!-- Status Filter -->
             <div>
                 <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select name="status" 
+                <select name="status"
                         id="status"
                         class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                     <option value="">All Statuses</option>
@@ -45,21 +45,21 @@
             <!-- Date Filter -->
             <div>
                 <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input type="date" 
-                       name="date" 
-                       id="date" 
+                <input type="date"
+                       name="date"
+                       id="date"
                        value="{{ request('date') }}"
                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
             </div>
 
             <!-- Actions -->
             <div class="flex items-end">
-                <button type="submit" 
+                <button type="submit"
                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
                     Filter
                 </button>
                 @if(request()->hasAny(['search', 'status', 'date']))
-                    <a href="{{ route('staff.appointments') }}" 
+                    <a href="{{ route('staff.appointments') }}"
                        class="ml-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-md">
                         Clear
                     </a>
@@ -75,12 +75,24 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Date & Time
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Customer
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Service
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Amount
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -91,7 +103,8 @@
                                         {{ $appointment->start_datetime->format('M j, Y') }}
                                     </div>
                                     <div class="text-sm text-gray-500">
-                                        {{ $appointment->start_datetime->format('g:i A') }} - {{ $appointment->end_datetime->format('g:i A') }}
+                                        {{ $appointment->start_datetime->format('g:i A') }} -
+                                        {{ $appointment->end_datetime->format('g:i A') }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -131,20 +144,15 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div class="flex items-center space-x-2">
-                                        <a href="{{ route('staff.appointments.show', $appointment) }}" 
-                                           class="text-blue-600 hover:text-blue-900" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        
                                         @if(in_array($appointment->status, ['scheduled', 'confirmed']))
-                                            <form action="{{ route('dashboard.appointments.status', $appointment) }}" 
-                                                  method="POST" 
+                                            <form action="{{ route('dashboard.appointments.status', $appointment) }}"
+                                                  method="POST"
                                                   class="inline"
                                                   onsubmit="return confirm('Mark this appointment as in progress?');">
                                                 @csrf
                                                 <input type="hidden" name="status" value="in_progress">
-                                                <button type="submit" 
-                                                        class="text-yellow-600 hover:text-yellow-900" 
+                                                <button type="submit"
+                                                        class="text-yellow-600 hover:text-yellow-900"
                                                         title="Start Appointment">
                                                     <i class="fas fa-play-circle"></i>
                                                 </button>
@@ -152,14 +160,14 @@
                                         @endif
 
                                         @if($appointment->status === 'in_progress')
-                                            <form action="{{ route('dashboard.appointments.status', $appointment) }}" 
-                                                  method="POST" 
+                                            <form action="{{ route('dashboard.appointments.status', $appointment) }}"
+                                                  method="POST"
                                                   class="inline"
                                                   onsubmit="return confirm('Mark this appointment as completed?');">
                                                 @csrf
                                                 <input type="hidden" name="status" value="completed">
-                                                <button type="submit" 
-                                                        class="text-green-600 hover:text-green-900" 
+                                                <button type="submit"
+                                                        class="text-green-600 hover:text-green-900"
                                                         title="Mark as Completed">
                                                     <i class="fas fa-check-circle"></i>
                                                 </button>
@@ -180,7 +188,8 @@
         @else
             <div class="text-center py-12">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <h3 class="mt-2 text-sm font-medium text-gray-900">No appointments found</h3>
                 <p class="mt-1 text-sm text-gray-500">Try adjusting your filters.</p>
@@ -189,3 +198,4 @@
     </div>
 </div>
 @endsection
+

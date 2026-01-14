@@ -25,10 +25,10 @@
                         <h3 class="text-lg font-semibold text-blue-900 mb-2">Appointment Details</h3>
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                                <span class="font-medium">Customer:</span> {{ $appointment->customer->full_name }}
+                                <span class="font-medium">Customer:</span> {{ $appointment->customer->full_name ?? 'N/A' }}
                             </div>
                             <div>
-                                <span class="font-medium">Service:</span> {{ $appointment->service->name }}
+                                <span class="font-medium">Service:</span> {{ $appointment->service->name ?? 'Service Unavailable' }}
                             </div>
                             <div>
                                 <span class="font-medium">Date:</span>

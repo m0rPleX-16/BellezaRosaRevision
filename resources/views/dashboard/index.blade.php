@@ -10,7 +10,17 @@
 @section('title', 'Dashboard - Belleza Rosa')
 
 @section('content')
-    <div class="space-y-6" data-filter-url="{{ route('dashboard.filter') }}" data-csrf-token="{{ csrf_token() }}"
+    @php
+        $statusPill = [
+            'scheduled' => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+            'confirmed' => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+            'in_progress' => 'bg-amber-50 text-amber-800 ring-amber-600/20',
+            'completed' => 'bg-slate-100 text-slate-700 ring-slate-600/20',
+            'cancelled' => 'bg-rose-50 text-rose-700 ring-rose-600/20',
+            'no_show' => 'bg-orange-50 text-orange-700 ring-orange-600/20',
+        ];
+    @endphp
+    <div class="space-y-10 lg:space-y-12" data-filter-url="{{ route('dashboard.filter') }}" data-csrf-token="{{ csrf_token() }}"
         data-appointments-index="{{ route('dashboard.appointments.index') }}"
         data-staff-index="{{ route('dashboard.users.index') }}"
         data-reports-financial="{{ route('dashboard.reports.financial') }}"
@@ -19,9 +29,13 @@
         data-total-customers="{{ $total_customers ?? 0 }}">
         <!-- Header with Date Filter -->
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <h1 class="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
-            <div class="flex flex-col sm:flex-row gap-3 items-end">
-                <div class="flex-1">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
+                <p class="mt-1 text-sm text-gray-500">Quick snapshot of operations and sales.</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+                <div class="w-full sm:w-56">
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Date filter</label>
                     <select id="dateFilter"
                         class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
                         <option value="today" {{ $currentFilter == 'today' ? 'selected' : '' }}>Today</option>
@@ -40,8 +54,11 @@
 
                 <!-- Custom Month Picker -->
                 <div id="customDateRange" class="hidden gap-2">
-                    <input type="month" id="customMonth" value="{{ $currentCustomDate }}"
-                        class="px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                    <div class="w-full sm:w-56">
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Month</label>
+                        <input type="month" id="customMonth" value="{{ $currentCustomDate }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                    </div>
                 </div>
 
                 <!-- Custom Date Range Picker -->
@@ -58,8 +75,8 @@
 
                 <!-- Apply Button -->
                 <button id="applyFilterBtn"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl transition font-medium whitespace-nowrap">
-                    Apply Filter
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl transition font-semibold whitespace-nowrap focus:outline-none focus:ring-4 focus:ring-blue-200">
+                    <i class="fas fa-filter mr-2"></i> Apply Filter
                 </button>
             </div>
         </div>
@@ -142,7 +159,7 @@
 
 
     <!-- Appointments -->
-    <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-1 gap-8 mt-6">
         <!-- Range Appointments -->
         <div class="card">
             <div class="flex items-center justify-between mb-4">
@@ -174,14 +191,8 @@
                                         <div class="text-sm text-gray-500">{{ $appointment->service->name ?? 'Deleted Service' }}</div>
                                     </div>
                                 </div>
-                                <span
-                                    class="text-xs font-medium 
-    {{ $appointment->status == 'scheduled' ? 'text-blue-700' : '' }}
-    {{ $appointment->status == 'confirmed' ? 'text-green-700' : '' }}
-    {{ $appointment->status == 'in_progress' ? 'text-yellow-700' : '' }}
-    {{ $appointment->status == 'completed' ? 'text-gray-600' : '' }}
-    {{ $appointment->status == 'cancelled' ? 'text-red-700' : '' }}
-    {{ $appointment->status == 'no_show' ? 'text-gray-500' : '' }}">
+                                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusPill[$appointment->status] ?? 'bg-gray-100 text-gray-700 ring-gray-600/20' }}">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70"></span>
                                     {{ str_replace('_', ' ', ucfirst($appointment->status)) }}
                                 </span>
                             </div>
@@ -200,19 +211,13 @@
                                                 {{ $appointment->start_datetime->format('A') }}</div>
                                         </div>
                                         <div>
-                                            <div class="font-medium text-gray-900">{{ $appointment->customer->full_name }}
+                                            <div class="font-medium text-gray-900">{{ $appointment->customer->full_name ?? 'N/A' }}
                                             </div>
-                                            <div class="text-sm text-gray-500">{{ $appointment->service->name }}</div>
+                                            <div class="text-sm text-gray-500">{{ $appointment->service->name ?? 'Service Unavailable' }}</div>
                                         </div>
                                     </div>
-                                    <span
-                                        class="text-xs font-medium
-    {{ $appointment->status == 'scheduled' ? 'text-blue-700' : '' }}
-    {{ $appointment->status == 'confirmed' ? 'text-green-700' : '' }}
-    {{ $appointment->status == 'in_progress' ? 'text-yellow-700' : '' }}
-    {{ $appointment->status == 'completed' ? 'text-gray-600' : '' }}
-    {{ $appointment->status == 'cancelled' ? 'text-red-700' : '' }}
-    {{ $appointment->status == 'no_show' ? 'text-gray-500' : '' }}">
+                                    <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusPill[$appointment->status] ?? 'bg-gray-100 text-gray-700 ring-gray-600/20' }}">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70"></span>
                                         {{ str_replace('_', ' ', ucfirst($appointment->status)) }}
                                     </span>
                                 </div>
@@ -234,7 +239,7 @@
     </div>
 
     <!-- Upcoming Appointments -->
-    <div class="card">
+    <div class="card mt-2 lg:mt-4">
         <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
             <i class="fas fa-calendar-alt text-purple-500 mr-2"></i> Upcoming Appointments (Next 7 Days)
         </h3>
@@ -243,7 +248,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead>
-                            <tr class="bg-gray-50">
+                            <tr class="bg-gray-50 sticky top-0 z-10">
                                 <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Date & Time</th>
                                 <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Customer</th>
                                 <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Service</th>
@@ -267,12 +272,8 @@
                                         {{ $appointment->staff->user->full_name ?? 'Unassigned' }}
                                     </td>
                                     <td class="px-4 py-3">
-                                        <span
-                                            class="px-2 py-1 text-xs rounded-full
-        {{ $appointment->status == 'scheduled' ? 'text-blue-600' : '' }}
-        {{ $appointment->status == 'confirmed' ? 'text-green-600' : '' }}
-        {{ $appointment->status == 'in_progress' ? 'text-yellow-600' : '' }}
-        {{ $appointment->status == 'completed' ? 'text-gray-600' : '' }}">
+                                        <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusPill[$appointment->status] ?? 'bg-gray-100 text-gray-700 ring-gray-600/20' }}">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70"></span>
                                             {{ str_replace('_', ' ', ucfirst($appointment->status)) }}
                                         </span>
                                     </td>

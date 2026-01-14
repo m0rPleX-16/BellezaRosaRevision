@@ -8,11 +8,13 @@ use App\Models\Service;
 use App\Models\Staff;
 use App\Models\Payment;
 use App\Models\SalonSetting;
+use App\Models\StaffSchedule;
 use App\Helpers\ToastHelper;
 use App\Notifications\AppointmentStatusUpdated;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 
@@ -60,7 +62,9 @@ class AppointmentController extends Controller
 
     public function customerIndex()
     {
-        $customer = auth()->user()->customer;
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $customer = $user->customer;
 
         // Get upcoming appointments (scheduled, confirmed, in_progress - future appointments)
         $upcomingAppointments = $customer->appointments()
@@ -121,8 +125,10 @@ class AppointmentController extends Controller
         $query = Appointment::with(['customer', 'service', 'staff.user', 'payment']);
 
         // Staff can only view their own appointments
-        if (auth()->user()->isStaff() && auth()->user()->staff) {
-            $query->where('staff_id', auth()->user()->staff->id);
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->isStaff() && $user->staff) {
+            $query->where('staff_id', $user->staff->id);
         }
 
         // 1. Search filter (customer name, phone, or service name)
@@ -250,7 +256,9 @@ class AppointmentController extends Controller
         
         // Check if this is a customer route - ensure customer can only view their own appointments
         if (request()->routeIs('customer.*')) {
-            $customer = auth()->user()->customer;
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            $customer = $user->customer;
             
             if (!$customer || $appointment->customer_id !== $customer->id) {
                 abort(403, 'You can only view your own appointments.');
@@ -260,7 +268,9 @@ class AppointmentController extends Controller
         }
         
         // For admin/staff routes, check permissions
-        if (auth()->user()->isStaff() && $appointment->staff_id !== auth()->user()->staff->id) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->isStaff() && $appointment->staff_id !== $user->staff->id) {
             abort(403, 'You can only view your own appointments.');
         }
         
@@ -378,25 +388,94 @@ class AppointmentController extends Controller
             ]);
         }
 
-        Appointment::create([
-            'customer_id' => $request->customer_id,
-            'service_id' => $request->service_id,
-            'staff_id' => $request->staff_id,
-            'start_datetime' => $request->start_datetime,
-            'end_datetime' => $endDateTime,
-            'total_amount' => $service->price_premium ?? $service->price_regular,
-            'status' => 'scheduled',
-            'notes' => $request->notes ?? null,
-        ]);
+        // Validate staff schedule for the selected day
+        $dayOfWeek = strtolower($startDateTime->format('l'));
+        $staffHasSchedule = StaffSchedule::where('staff_id', $request->staff_id)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_active', true)
+            ->exists();
 
-        // Redirect based on the route - customer or admin/staff
-        if (request()->routeIs('customer.*')) {
-            return redirect()->route('customer.appointments.index')
-                ->with('success', 'Appointment booked successfully!');
+        if (!$staffHasSchedule) {
+            return back()->withErrors([
+                'start_datetime' => 'This staff member has not set their availability for ' . ucfirst($dayOfWeek) . '. Please select another date or choose a different staff member.'
+            ]);
         }
 
-        return redirect()->route('dashboard.appointments.index')
-            ->with('success', 'Appointment created successfully!');
+        // Check if time slot is within staff's schedule
+        $staffSchedules = StaffSchedule::where('staff_id', $request->staff_id)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_active', true)
+            ->get();
+
+        $isWithinSchedule = false;
+        foreach ($staffSchedules as $schedule) {
+            $scheduleStartTime = $schedule->start_time instanceof Carbon 
+                ? $schedule->start_time->format('H:i:s')
+                : Carbon::parse($schedule->start_time)->format('H:i:s');
+            $scheduleEndTime = $schedule->end_time instanceof Carbon 
+                ? $schedule->end_time->format('H:i:s')
+                : Carbon::parse($schedule->end_time)->format('H:i:s');
+            
+            $scheduleStart = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $scheduleStartTime);
+            $scheduleEnd = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $scheduleEndTime);
+            
+            if ($startDateTime->gte($scheduleStart) && $endDateTime->lte($scheduleEnd)) {
+                $isWithinSchedule = true;
+                break;
+            }
+        }
+
+        if (!$isWithinSchedule) {
+            return back()->withErrors([
+                'start_datetime' => 'The selected time slot is not within the staff member\'s scheduled availability for this day.'
+            ]);
+        }
+
+        // Create appointment within a database transaction
+        try {
+            DB::beginTransaction();
+
+            // Double-check availability right before creating (race condition prevention)
+            if (!$this->isStaffAvailable($request->staff_id, $request->start_datetime, $duration)) {
+                DB::rollBack();
+                return back()->withErrors([
+                    'start_datetime' => 'This time slot was just booked by another customer. Please select another time.'
+                ]);
+            }
+
+            $appointment = Appointment::create([
+                'customer_id' => $request->customer_id,
+                'service_id' => $request->service_id,
+                'staff_id' => $request->staff_id,
+                'start_datetime' => $request->start_datetime,
+                'end_datetime' => $endDateTime,
+                'total_amount' => $service->price_premium ?? $service->price_regular,
+                'status' => 'scheduled',
+                'notes' => $request->notes ?? null,
+            ]);
+
+            DB::commit();
+
+            // Redirect based on the route - customer or admin/staff
+            if (request()->routeIs('customer.*')) {
+                return redirect()->route('customer.appointments.index')
+                    ->with('success', 'Appointment booked successfully!');
+            }
+
+            return redirect()->route('dashboard.appointments.index')
+                ->with('success', 'Appointment created successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Appointment creation failed: ' . $e->getMessage(), [
+                'request' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withErrors([
+                'start_datetime' => 'An error occurred while creating the appointment. Please try again.'
+            ]);
+        }
     }
 
     public function update(Request $request, Appointment $appointment)
@@ -405,7 +484,7 @@ class AppointmentController extends Controller
             'customer_id' => 'required|exists:customers,id',
             'service_id' => 'required|exists:services,id',
             'staff_id' => 'required|exists:staff,id',
-            'start_datetime' => 'required|date',
+            'start_datetime' => 'required|date|after_or_equal:today',
         ]);
 
         $service = Service::findOrFail($request->service_id);
@@ -448,8 +527,56 @@ class AppointmentController extends Controller
             ]);
         }
 
-        $startDateTime = Carbon::parse($request->start_datetime);
-        $endDateTime = $startDateTime->copy()->addMinutes($duration);
+        // Validate max days ahead
+        $maxDate = now()->addDays($salonSettings->max_days_book_ahead);
+        if ($startDateTime->gt($maxDate)) {
+            return back()->withErrors([
+                'start_datetime' => "Appointments can only be booked up to {$salonSettings->max_days_book_ahead} days in advance."
+            ]);
+        }
+
+        // Validate staff schedule for the selected day
+        $dayOfWeek = strtolower($startDateTime->format('l'));
+        $staffHasSchedule = StaffSchedule::where('staff_id', $request->staff_id)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_active', true)
+            ->exists();
+
+        if (!$staffHasSchedule) {
+            return back()->withErrors([
+                'start_datetime' => 'This staff member has not set their availability for ' . ucfirst($dayOfWeek) . '. Please select another date or choose a different staff member.'
+            ]);
+        }
+
+        // Check if time slot is within staff's schedule
+        $staffSchedules = StaffSchedule::where('staff_id', $request->staff_id)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_active', true)
+            ->get();
+
+        $isWithinSchedule = false;
+        foreach ($staffSchedules as $schedule) {
+            $scheduleStartTime = $schedule->start_time instanceof Carbon 
+                ? $schedule->start_time->format('H:i:s')
+                : Carbon::parse($schedule->start_time)->format('H:i:s');
+            $scheduleEndTime = $schedule->end_time instanceof Carbon 
+                ? $schedule->end_time->format('H:i:s')
+                : Carbon::parse($schedule->end_time)->format('H:i:s');
+            
+            $scheduleStart = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $scheduleStartTime);
+            $scheduleEnd = Carbon::parse($startDateTime->format('Y-m-d') . ' ' . $scheduleEndTime);
+            
+            if ($startDateTime->gte($scheduleStart) && $endDateTime->lte($scheduleEnd)) {
+                $isWithinSchedule = true;
+                break;
+            }
+        }
+
+        if (!$isWithinSchedule) {
+            return back()->withErrors([
+                'start_datetime' => 'The selected time slot is not within the staff member\'s scheduled availability for this day.'
+            ]);
+        }
 
         $appointment->update([
             'customer_id' => $request->customer_id,
@@ -488,9 +615,12 @@ class AppointmentController extends Controller
             $selectedDate = $request->date;
             $serviceId = $request->service_id;
             
-            // Get salon settings
+            // Get the day of the week for the selected date
+            $selectedCarbon = Carbon::parse($selectedDate);
+            $dayOfWeek = strtolower($selectedCarbon->format('l')); // monday, tuesday, etc.
+            
+            // Get salon settings (fallback if no staff schedule)
             $salonSettings = SalonSetting::getSettings();
-            // Ensure times are strings (TIME columns might return as objects)
             $openingTime = is_string($salonSettings->opening_time) 
                 ? $salonSettings->opening_time 
                 : (string)$salonSettings->opening_time ?? '09:00:00';
@@ -516,65 +646,123 @@ class AppointmentController extends Controller
                 }
             }
             
+            // Get staff schedules for this day of the week
+            $staffSchedules = StaffSchedule::where('staff_id', $staffId)
+                ->where('day_of_week', $dayOfWeek)
+                ->where('is_active', true)
+                ->orderBy('start_time')
+                ->get();
+            
             // Get existing appointments for the selected staff and date
             $appointments = Appointment::where('staff_id', $staffId)
                 ->whereDate('start_datetime', $selectedDate)
                 ->whereNotIn('status', ['cancelled', 'no_show'])
                 ->get(['start_datetime', 'end_datetime']);
             
-            // Generate time slots based on service duration
-            $start = Carbon::parse($selectedDate . ' ' . $openingTime);
-            $end = Carbon::parse($selectedDate . ' ' . $closingTime);
-            $now = Carbon::now();
-            $isToday = Carbon::parse($selectedDate)->isToday();
-            
             $timeSlots = [];
+            $now = Carbon::now();
+            $isToday = $selectedCarbon->isToday();
             
-            while ($start->lt($end)) {
-                // Skip past times if the selected date is today
-                if ($isToday && $start->lt($now)) {
-                    $start->addMinutes($interval);
-                    continue;
-                }
-                
-                // Calculate when the appointment would end
-                $appointmentEnd = $start->copy()->addMinutes($serviceDuration);
-                
-                // Skip if appointment would end after closing time
-                if ($appointmentEnd->gt($end)) {
-                    $start->addMinutes($interval);
-                    continue;
-                }
-                
-                $isAvailable = true;
-                
-                // Check if the time slot conflicts with existing appointments
-                foreach ($appointments as $appt) {
-                    $apptStart = Carbon::parse($appt->start_datetime);
-                    $apptEnd = Carbon::parse($appt->end_datetime);
+            // If staff has schedules for this day, use them
+            if ($staffSchedules->count() > 0) {
+                foreach ($staffSchedules as $schedule) {
+                    // Handle time format - could be Carbon instance or string
+                    $scheduleStartTime = $schedule->start_time;
+                    $scheduleEndTime = $schedule->end_time;
                     
-                    // Check for overlap: new appointment overlaps with existing one
-                    if ($start->lt($apptEnd) && $appointmentEnd->gt($apptStart)) {
-                        $isAvailable = false;
-                        break;
+                    if ($scheduleStartTime instanceof Carbon) {
+                        $scheduleStartTime = $scheduleStartTime->format('H:i:s');
+                    } else {
+                        $scheduleStartTime = Carbon::parse($scheduleStartTime)->format('H:i:s');
+                    }
+                    
+                    if ($scheduleEndTime instanceof Carbon) {
+                        $scheduleEndTime = $scheduleEndTime->format('H:i:s');
+                    } else {
+                        $scheduleEndTime = Carbon::parse($scheduleEndTime)->format('H:i:s');
+                    }
+                    
+                    $scheduleStart = Carbon::parse($selectedDate . ' ' . $scheduleStartTime);
+                    $scheduleEnd = Carbon::parse($selectedDate . ' ' . $scheduleEndTime);
+                    
+                    // Check max appointments limit for this schedule
+                    if ($schedule->max_appointments !== null) {
+                        $appointmentsInSchedule = Appointment::where('staff_id', $staffId)
+                            ->whereDate('start_datetime', $selectedDate)
+                            ->whereNotIn('status', ['cancelled', 'no_show'])
+                            ->where(function ($q) use ($scheduleStart, $scheduleEnd) {
+                                $q->whereBetween('start_datetime', [$scheduleStart, $scheduleEnd->copy()->subMinute()])
+                                    ->orWhereBetween('end_datetime', [$scheduleStart->copy()->addMinute(), $scheduleEnd])
+                                    ->orWhere(function ($q2) use ($scheduleStart, $scheduleEnd) {
+                                        $q2->where('start_datetime', '<=', $scheduleStart)
+                                            ->where('end_datetime', '>=', $scheduleEnd);
+                                    });
+                            })
+                            ->count();
+                        
+                        if ($appointmentsInSchedule >= $schedule->max_appointments) {
+                            continue; // Skip this schedule, max appointments reached
+                        }
+                    }
+                    
+                    // Generate time slots within this schedule
+                    $current = $scheduleStart->copy();
+                    
+                    while ($current->lt($scheduleEnd)) {
+                        // Skip past times if the selected date is today
+                        if ($isToday && $current->lt($now)) {
+                            $current->addMinutes($interval);
+                            continue;
+                        }
+                        
+                        // Calculate when the appointment would end
+                        $appointmentEnd = $current->copy()->addMinutes($serviceDuration);
+                        
+                        // Skip if appointment would end after schedule end time
+                        if ($appointmentEnd->gt($scheduleEnd)) {
+                            $current->addMinutes($interval);
+                            continue;
+                        }
+                        
+                        $isAvailable = true;
+                        
+                        // Check if the time slot conflicts with existing appointments
+                        foreach ($appointments as $appt) {
+                            $apptStart = Carbon::parse($appt->start_datetime);
+                            $apptEnd = Carbon::parse($appt->end_datetime);
+                            
+                            // Check for overlap: new appointment overlaps with existing one
+                            if ($current->lt($apptEnd) && $appointmentEnd->gt($apptStart)) {
+                                $isAvailable = false;
+                                break;
+                            }
+                        }
+                        
+                        if ($isAvailable) {
+                            $timeSlots[] = [
+                                'time' => $current->format('H:i:s'),
+                                'formatted_time' => $current->format('g:i A')
+                            ];
+                        }
+                        
+                        $current->addMinutes($interval);
                     }
                 }
-                
-                if ($isAvailable) {
-                    $timeSlots[] = [
-                        'time' => $start->format('H:i:s'),
-                        'formatted_time' => $start->format('g:i A')
-                    ];
-                }
-                
-                $start->addMinutes($interval);
             }
+            // If staff has no schedule for this day, timeSlots array remains empty (no fallback to salon hours)
+            
+            // Sort time slots by time
+            usort($timeSlots, function($a, $b) {
+                return strcmp($a['time'], $b['time']);
+            });
             
             return response()->json([
-                'available_times' => $timeSlots
+                'available_times' => $timeSlots,
+                'has_schedule' => $staffSchedules->count() > 0,
+                'day_of_week' => ucfirst($dayOfWeek)
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error in checkAvailability: ' . $e->getMessage(), [
+            \Illuminate\Support\Facades\Log::error('Error in checkAvailability: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'request' => $request->all()
             ]);
@@ -589,7 +777,9 @@ class AppointmentController extends Controller
     public function updateStatus(Request $request, Appointment $appointment)
     {
         // Staff can only update their own appointments
-        if (auth()->user()->isStaff() && auth()->user()->staff && $appointment->staff_id !== auth()->user()->staff->id) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->isStaff() && $user->staff && $appointment->staff_id !== $user->staff->id) {
             abort(403, 'You can only update your own appointments.');
         }
 
@@ -601,6 +791,23 @@ class AppointmentController extends Controller
         $appointmentDate = $appointment->start_datetime;
         $oldStatus = $appointment->status;
         $newStatus = $request->status;
+
+        // Validate status transitions
+        $validTransitions = [
+            'scheduled' => ['confirmed', 'cancelled', 'no_show', 'failed'],
+            'confirmed' => ['in_progress', 'cancelled', 'no_show', 'failed'],
+            'in_progress' => ['completed', 'cancelled', 'failed'],
+            'completed' => [], // Cannot transition from completed
+            'cancelled' => [], // Cannot transition from cancelled
+            'no_show' => [], // Cannot transition from no_show
+            'failed' => [], // Cannot transition from failed
+        ];
+
+        if (!in_array($newStatus, $validTransitions[$oldStatus] ?? [])) {
+            return back()->withErrors([
+                'status' => "Invalid status transition from '{$oldStatus}' to '{$newStatus}'. Valid transitions: " . implode(', ', $validTransitions[$oldStatus] ?? [])
+            ]);
+        }
 
         // Prevent marking as completed before appointment date
         if ($newStatus === 'completed' && $currentDateTime->lt($appointmentDate)) {
@@ -618,8 +825,25 @@ class AppointmentController extends Controller
             ]);
         }
 
-        // Update the appointment status
-        $appointment->update(['status' => $newStatus]);
+        // Update the appointment status within a transaction
+        try {
+            DB::beginTransaction();
+            
+            $appointment->update(['status' => $newStatus]);
+            
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Status update failed: ' . $e->getMessage(), [
+                'appointment_id' => $appointment->id,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus
+            ]);
+
+            return back()->withErrors([
+                'status' => 'An error occurred while updating the appointment status. Please try again.'
+            ]);
+        }
 
         // Notify customer if status changed and customer has a user account
         if ($oldStatus !== $newStatus && $appointment->customer && $appointment->customer->user) {
@@ -675,14 +899,16 @@ class AppointmentController extends Controller
         }
 
         // Use the helper method from the model
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         if ($status === 'cancelled') {
-            $appointment->cancel($cancellationReason, auth()->user());
+            $appointment->cancel($cancellationReason, $user);
         } else {
             $appointment->markAsFailed($cancellationReason);
         }
 
         // Handle refund if applicable (only for admin/staff)
-        if (!$request->routeIs('customer.*') && $request->refund_amount > 0 && $appointment->payment) {
+        if (!$request->routeIs('customer.*') && $request->has('refund_amount') && $request->refund_amount > 0 && $appointment->payment) {
             // Create refund record
             Payment::create([
                 'appointment_id' => $appointment->id,

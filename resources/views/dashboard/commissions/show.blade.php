@@ -75,13 +75,13 @@
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-500">Service</label>
-                    <p class="mt-1 text-lg font-semibold text-gray-900">{{ $commission->appointment->service->name }}</p>
-                    <p class="text-sm text-gray-500">{{ $commission->appointment->service->duration_minutes }} minutes</p>
+                    <p class="mt-1 text-lg font-semibold text-gray-900">{{ $commission->appointment->service->name ?? 'Service Unavailable' }}</p>
+                    <p class="text-sm text-gray-500">{{ $commission->appointment->service->duration_minutes ?? 0 }} minutes</p>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-500">Customer</label>
-                    <p class="mt-1 text-lg font-semibold text-gray-900">{{ $commission->appointment->customer->full_name }}</p>
+                    <p class="mt-1 text-lg font-semibold text-gray-900">{{ $commission->appointment->customer->full_name ?? 'N/A' }}</p>
                     <p class="text-sm text-gray-500">{{ $commission->appointment->customer->phone ?? 'N/A' }}</p>
                 </div>
                 

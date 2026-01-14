@@ -51,7 +51,7 @@
                                     <div class="space-y-1">
                                         @foreach($customer->appointments->take(3) as $appointment)
                                             <div class="text-sm text-gray-700">
-                                                • {{ $appointment->service->name }}
+                                                • {{ $appointment->service->name ?? 'Service Unavailable' }}
                                                 <span class="text-xs text-gray-500">({{ $appointment->start_datetime->format('M j') }})</span>
                                             </div>
                                         @endforeach

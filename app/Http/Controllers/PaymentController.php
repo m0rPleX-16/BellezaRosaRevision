@@ -9,21 +9,23 @@ use App\Models\Customer;
 use App\Models\Commission;
 use App\Models\SalonSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
     public function index()
     {
-        // Staff can only view payments for their own appointments
-        $query = Payment::with(['appointment.service', 'appointment.staff', 'customer'])
-            ->whereHas('appointment', function ($q) {
-                $q->whereHas('customer')->whereHas('service');
-            });
+        // Load payments with relationships
+        $query = Payment::with(['appointment.service', 'appointment.staff.user', 'customer']);
 
-        if (auth()->user()->isStaff() && auth()->user()->staff) {
-            $query->whereHas('appointment', function ($q) {
-                $q->where('staff_id', auth()->user()->staff->id);
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        // Staff can only view payments for their own appointments
+        if ($user->isStaff() && $user->staff) {
+            $query->whereHas('appointment', function ($q) use ($user) {
+                $q->where('staff_id', $user->staff->id);
             });
         }
 
@@ -176,20 +178,14 @@ class PaymentController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment recorded successfully!',
-                'payment_id' => $payment->id
-            ]);
+            return redirect()->route('dashboard.payments.show', $payment)
+                ->with('success', 'Payment recorded successfully!');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Payment recording failed: ' . $e->getMessage());
+            Log::error('Payment recording failed: ' . $e->getMessage());
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to record payment. Please try again.'
-            ], 500);
+            return back()->with('error', 'Failed to record payment. Please try again.');
         }
     }
 
@@ -350,7 +346,29 @@ class PaymentController extends Controller
         // Check if commission already exists for this appointment
         $existingCommission = Commission::where('appointment_id', $appointment->id)->first();
         if ($existingCommission) {
+            Log::info('Commission already exists for appointment', [
+                'appointment_id' => $appointment->id,
+                'commission_id' => $existingCommission->id
+            ]);
             return; // Commission already created
+        }
+
+        // Ensure appointment is completed before creating commission
+        if ($appointment->status !== 'completed') {
+            \Illuminate\Support\Facades\Log::warning('Cannot create commission for non-completed appointment', [
+                'appointment_id' => $appointment->id,
+                'status' => $appointment->status
+            ]);
+            return;
+        }
+
+        // Ensure payment is paid before creating commission
+        if ($payment->status !== 'paid') {
+            \Illuminate\Support\Facades\Log::warning('Cannot create commission for non-paid payment', [
+                'appointment_id' => $appointment->id,
+                'payment_status' => $payment->status
+            ]);
+            return;
         }
 
         $salonSettings = SalonSetting::first();
@@ -358,18 +376,43 @@ class PaymentController extends Controller
         $commissionRate = $salonSettings->commission_rate ?? $salonSettings->default_commission_rate ?? null;
         
         if (!$salonSettings || !$commissionRate) {
+            \Illuminate\Support\Facades\Log::warning('No commission rate set in salon settings', [
+                'appointment_id' => $appointment->id
+            ]);
             return; // No commission rate set
         }
 
-        $commissionAmount = ($commissionRate / 100) * $payment->amount;
+        // Ensure staff is assigned
+        if (!$appointment->staff_id) {
+            \Illuminate\Support\Facades\Log::warning('Cannot create commission for appointment without staff', [
+                'appointment_id' => $appointment->id
+            ]);
+            return;
+        }
 
-        Commission::create([
-            'appointment_id' => $appointment->id,
-            'staff_id' => $appointment->staff_id,
-            'service_amount' => $payment->amount,
-            'commission_rate' => $commissionRate,
-            'amount' => $commissionAmount,
-            'status' => 'pending'
-        ]);
+        try {
+            $commissionAmount = ($commissionRate / 100) * $payment->amount;
+
+            $commission = Commission::create([
+                'appointment_id' => $appointment->id,
+                'staff_id' => $appointment->staff_id,
+                'service_amount' => $payment->amount,
+                'commission_rate' => $commissionRate,
+                'amount' => $commissionAmount,
+                'status' => 'pending'
+            ]);
+
+            \Illuminate\Support\Facades\Log::info('Commission created successfully', [
+                'appointment_id' => $appointment->id,
+                'commission_id' => $commission->id,
+                'amount' => $commissionAmount
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Commission creation failed: ' . $e->getMessage(), [
+                'appointment_id' => $appointment->id,
+                'payment_id' => $payment->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 }

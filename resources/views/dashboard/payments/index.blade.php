@@ -6,8 +6,11 @@
 @section('content')
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold text-gray-900">Payments</h1>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Payments</h1>
+            <p class="mt-1 text-sm text-gray-500">Track payments, review status, and manage records.</p>
+        </div>
     </div>
 
         <!-- Payment Statistics -->
@@ -96,7 +99,7 @@
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
-                    <tr class="bg-blue-600 text-white">
+                    <tr class="bg-blue-600 text-white sticky top-0 z-10">
                         <th class="px-4 py-3 text-left text-sm font-semibold">Payment ID</th>
                         <th class="px-4 py-3 text-left text-sm font-semibold">Customer</th>
                         <th class="px-4 py-3 text-left text-sm font-semibold">Appointment</th>
@@ -117,9 +120,9 @@
                             <div class="text-sm text-gray-500">{{ $payment->customer->phone ?? 'N/A' }}</div>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-900">
-                            {{ $payment->appointment->service->name ?? 'Deleted Service' }}<br>
+                            {{ $payment->appointment->service->name ?? 'Service Unavailable' }}<br>
                             <span class="text-xs text-gray-500">
-                                {{ $payment->appointment->start_datetime->format('M j, g:i A') }}
+                                {{ $payment->appointment?->start_datetime?->format('M j, g:i A') ?? 'N/A' }}
                             </span>
                         </td>
                         <td class="px-4 py-3 text-sm font-semibold text-gray-900">
@@ -148,14 +151,16 @@
                             {{ $payment->created_at->format('M j, Y') }}
                         </td>
                         <td class="px-4 py-3">
-                            <div class="flex space-x-2">
-                                <a href="{{ route('dashboard.payments.show', $payment) }}" 
-                                   class="text-blue-600 hover:text-blue-800 transition">
-                                    <i class="fas fa-eye"></i>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{{ route('dashboard.payments.show', $payment) }}"
+                                   class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+                                   title="View Payment">
+                                    <i class="fas fa-eye mr-2"></i>View
                                 </a>
-                                <a href="{{ route('dashboard.payments.edit', $payment) }}" 
-                                   class="text-green-600 hover:text-green-800 transition">
-                                    <i class="fas fa-edit"></i>
+                                <a href="{{ route('dashboard.payments.edit', $payment) }}"
+                                   class="inline-flex items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100"
+                                   title="Edit Payment">
+                                    <i class="fas fa-pen-to-square mr-2"></i>Edit
                                 </a>
                             </div>
                         </td>

@@ -81,13 +81,13 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Service</label>
-                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $payment->appointment->service->name }}
+                            <p class="mt-1 text-lg font-semibold text-gray-900">{{ $payment->appointment->service->name ?? 'Service Unavailable' }}
                             </p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Date & Time</label>
                             <p class="mt-1 text-gray-900">
-                                {{ $payment->appointment->start_datetime->format('F j, Y g:i A') }}</p>
+                                {{ $payment->appointment->start_datetime?->format('F j, Y g:i A') ?? 'N/A' }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Staff</label>
@@ -116,13 +116,13 @@
                     <div class="space-y-3">
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Name</label>
-                            <p class="mt-1 font-semibold text-gray-900">{{ $payment->customer->full_name }}</p>
+                            <p class="mt-1 font-semibold text-gray-900">{{ $payment->customer->full_name ?? 'N/A' }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Phone</label>
-                            <p class="mt-1 text-gray-900">{{ $payment->customer->phone }}</p>
+                            <p class="mt-1 text-gray-900">{{ $payment->customer->phone ?? 'N/A' }}</p>
                         </div>
-                        @if ($payment->customer->email)
+                        @if ($payment->customer?->email)
                             <div>
                                 <label class="block text-sm font-medium text-gray-500">Email</label>
                                 <p class="mt-1 text-gray-900">{{ $payment->customer->email }}</p>
@@ -130,12 +130,12 @@
                         @endif
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Total Visits</label>
-                            <p class="mt-1 text-gray-900">{{ $payment->customer->total_visits }}</p>
+                            <p class="mt-1 text-gray-900">{{ $payment->customer->total_visits ?? 0 }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Total Spent</label>
                             <p class="mt-1 font-semibold text-green-600">
-                                ₱{{ number_format($payment->customer->total_spent, 2) }}</p>
+                                ₱{{ number_format($payment->customer->total_spent ?? 0, 2) }}</p>
                         </div>
                     </div>
                 </div>

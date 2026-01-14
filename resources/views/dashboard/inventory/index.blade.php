@@ -6,17 +6,22 @@
 @section('content')
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold text-gray-900">Inventory</h1>
-        <div class="flex space-x-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Inventory</h1>
+            <p class="mt-1 text-sm text-gray-500">Monitor stock levels and log daily usage.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
             <a href="{{ route('dashboard.inventory.daily-update') }}" 
-               class="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-2 px-4 rounded-xl transition">
-                <i class="fas fa-edit mr-2"></i> Daily Update
+               class="inline-flex items-center justify-center rounded-xl bg-yellow-500 px-4 py-2 text-sm font-semibold text-blue-900 shadow-sm transition hover:bg-yellow-400 focus:outline-none focus:ring-4 focus:ring-yellow-200">
+                <i class="fas fa-clipboard-check mr-2"></i> Daily Update
             </a>
+            @if(auth()->user()->isAdmin())
             <button onclick="openAddItemModal()" 
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl transition">
+                    class="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200">
                 <i class="fas fa-plus mr-2"></i> Add Item
             </button>
+            @endif
         </div>
     </div>
 
@@ -97,7 +102,7 @@
     <div class="overflow-x-auto">
         <table class="w-full">
             <thead>
-                <tr class="bg-blue-600 text-white">
+                <tr class="bg-blue-600 text-white sticky top-0 z-10">
                     <th class="px-4 py-3 text-left">Item</th>
                     <th class="px-4 py-3 text-left">Current Stock</th>
                     <th class="px-4 py-3 text-left">Min Stock</th>
@@ -134,9 +139,9 @@
                         @endif
                     </td>
                     <td class="px-4 py-3">
-                        <button onclick="updateStockModal({{ $item->id }})" 
-                                class="text-blue-600 hover:text-blue-800 transition px-2 py-1 hover:bg-blue-50 rounded-lg">
-                            <i class="fas fa-edit mr-1"></i> Update
+                        <button type="button" data-item-id="{{ $item->id }}"
+                                class="js-update-stock inline-flex items-center justify-center rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100">
+                            <i class="fas fa-pen-to-square mr-2"></i> Update
                         </button>
                     </td>
                 </tr>
@@ -422,6 +427,14 @@ function updateStockModal(itemId) {
         });
 }
 
+// Delegate clicks for update buttons (avoids inline JS + improves linting)
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.js-update-stock');
+    if (!btn) return;
+    const itemId = btn.getAttribute('data-item-id');
+    if (itemId) updateStockModal(itemId);
+});
+
 // Real-time validation
 document.getElementById('quantity').addEventListener('input', function() {
     const type = document.getElementById('type').value;
@@ -469,34 +482,6 @@ document.getElementById('updateStockForm').addEventListener('submit', function(e
 function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
 }
-// Add showToast function to index.blade.php
-function showToast(message, type = 'info') {
-    const colors = {
-        success: 'bg-green-500',
-        error: 'bg-red-500',
-        info: 'bg-blue-500',
-        warning: 'bg-yellow-500'
-    };
-    
-    // Remove any existing toast
-    const existingToast = document.querySelector('.custom-toast');
-    if (existingToast) {
-        existingToast.remove();
-    }
-    
-    // Create new toast
-    const toast = document.createElement('div');
-    toast.className = `custom-toast fixed top-4 right-4 text-white px-4 py-2 rounded-lg shadow-lg z-50 ${colors[type] || colors.info}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        if (toast.parentNode) {
-            toast.remove();
-        }
-    }, 3000);
-}
 // Calendar Filter Functionality
 document.addEventListener('DOMContentLoaded', function() {
     const dateFilter = document.getElementById('dateFilter');
@@ -515,7 +500,7 @@ function resetDateFilter() {
     window.location.href = '{{ route("dashboard.inventory.index") }}';
 }
 
-// Also update the showToast function to prevent duplicates
+// Toast helper (single definition)
 function showToast(message, type = 'info') {
     const colors = {
         success: 'bg-green-500',

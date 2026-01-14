@@ -1,188 +1,180 @@
+@php
+/** @var \App\Models\User $user */
+@endphp
 <section>
-    <header>
-        <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {{ __('Profile Information') }}
-        </h2>
-
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {{ __("Update your account's profile information.") }}
-        </p>
-    </header>
-
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
         @csrf
     </form>
 
-    <form method="post" action="{{ request()->routeIs('customer.*') ? route('customer.profile.update') : route('profile.update') }}" enctype="multipart/form-data" class="mt-6 space-y-6">
+    <form method="post" action="{{ request()->routeIs('customer.*') ? route('customer.profile.update') : route('profile.update') }}" enctype="multipart/form-data" class="space-y-5">
         @csrf
         @method('patch')
 
         <!-- Avatar Upload -->
-        <div class="flex items-center space-x-6">
+        <div class="flex items-center gap-5">
             <div class="shrink-0">
                 @if($user->avatar)
-                    <img id="avatar-preview" class="h-20 w-20 rounded-full object-cover" 
+                    <img id="avatar-preview" class="h-20 w-20 rounded-full object-cover border-2 border-gray-200" 
                          src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->full_name }}">
                 @else
-                    <div class="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span class="text-2xl text-gray-500">{{ substr($user->full_name, 0, 1) }}</span>
+                    <div class="h-20 w-20 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center border-2 border-pink-200">
+                        <span class="text-2xl font-bold text-white">{{ strtoupper(substr($user->full_name, 0, 1)) }}</span>
                     </div>
                 @endif
             </div>
-            <label class="block">
-                <span class="sr-only">{{ __('Choose profile photo') }}</span>
-                <input type="file" name="avatar" id="avatar" class="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100"
-                    onchange="previewAvatar(this)">
+            <div>
+                <label class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition">
+                    <i class="fas fa-camera mr-2 text-gray-400"></i>
+                    Change Photo
+                    <input type="file" name="avatar" id="avatar" class="hidden" accept="image/*" onchange="previewAvatar(this)">
+                </label>
+                <p class="mt-1 text-xs text-gray-500">JPG, PNG up to 2MB</p>
                 <x-input-error class="mt-2" :messages="$errors->get('avatar')" />
-            </label>
+            </div>
         </div>
 
-        <!-- Full Name -->
-        <div>
-            <x-input-label for="full_name" :value="__('Full Name')" />
-            <x-text-input id="full_name" name="full_name" type="text" class="mt-1 block w-full" 
-                :value="old('full_name', $user->full_name)" required autofocus autocomplete="name" />
-            <x-input-error class="mt-2" :messages="$errors->get('full_name')" />
-        </div>
+        <!-- Two Column Grid for Name/Username -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Full Name -->
+            <div>
+                <x-input-label for="full_name" :value="__('Full Name')" />
+                <x-text-input id="full_name" name="full_name" type="text" 
+                    :value="old('full_name', $user->full_name)" required autofocus autocomplete="name" />
+                <x-input-error class="mt-1" :messages="$errors->get('full_name')" />
+            </div>
 
-        <!-- Username -->
-        <div>
-            <x-input-label for="username" :value="__('Username')" />
-            <x-text-input id="username" name="username" type="text" class="mt-1 block w-full" 
-                :value="old('username', $user->username)" required autocomplete="username" />
-            <x-input-error class="mt-2" :messages="$errors->get('username')" />
+            <!-- Username -->
+            <div>
+                <x-input-label for="username" :value="__('Username')" />
+                <x-text-input id="username" name="username" type="text" 
+                    :value="old('username', $user->username)" required autocomplete="username" />
+                <x-input-error class="mt-1" :messages="$errors->get('username')" />
+            </div>
         </div>
 
         <!-- Email -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" 
+            <x-input-label for="email" :value="__('Email Address')" />
+            <x-text-input id="email" name="email" type="email" 
                 :value="old('email', $user->email)" required autocomplete="email" />
-            <x-input-error class="mt-2" :messages="$errors->get('email')" />
+            <x-input-error class="mt-1" :messages="$errors->get('email')" />
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
-                <div>
-                    <p class="text-sm mt-2 text-gray-800 dark:text-gray-200">
-                        {{ __('Your email address is unverified.') }}
-
-                        <button form="send-verification" class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800">
-                            {{ __('Click here to re-send the verification email.') }}
-                        </button>
-                    </p>
-
-                    @if (session('status') === 'verification-link-sent')
-                        <p class="mt-2 font-medium text-sm text-green-600 dark:text-green-400">
-                            {{ __('A new verification link has been sent to your email address.') }}
-                        </p>
-                    @endif
+                <div class="mt-2 flex items-center gap-2 text-sm">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        <i class="fas fa-exclamation-circle mr-1"></i> Unverified
+                    </span>
+                    <button form="send-verification" class="text-blue-600 hover:text-blue-800 underline text-sm">
+                        Resend verification email
+                    </button>
                 </div>
+
+                @if (session('status') === 'verification-link-sent')
+                    <p class="mt-2 text-sm text-green-600">
+                        <i class="fas fa-check-circle mr-1"></i> Verification link sent!
+                    </p>
+                @endif
             @endif
         </div>
 
-        <!-- Phone -->
-        <div>
-            <x-input-label for="phone" :value="__('Phone Number')" />
-            <x-text-input id="phone" name="phone" type="tel" class="mt-1 block w-full" 
-                :value="old('phone', $user->phone)" autocomplete="tel" />
-            <x-input-error class="mt-2" :messages="$errors->get('phone')" />
-        </div>
+        <!-- Phone & Gender Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Phone -->
+            <div>
+                <x-input-label for="phone" :value="__('Phone Number')" />
+                <x-text-input id="phone" name="phone" type="tel" 
+                    :value="old('phone', $user->phone)" autocomplete="tel" placeholder="09xx xxx xxxx" />
+                <x-input-error class="mt-1" :messages="$errors->get('phone')" />
+            </div>
 
-        <!-- Gender -->
-        <div>
-            <x-input-label for="gender" :value="__('Gender')" />
-            <select id="gender" name="gender" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">
-                <option value="">{{ __('Select Gender') }}</option>
-                <option value="male" {{ old('gender', $user->gender) == 'male' ? 'selected' : '' }}>{{ __('Male') }}</option>
-                <option value="female" {{ old('gender', $user->gender) == 'female' ? 'selected' : '' }}>{{ __('Female') }}</option>
-                <option value="other" {{ old('gender', $user->gender) == 'other' ? 'selected' : '' }}>{{ __('Other') }}</option>
-            </select>
-            <x-input-error class="mt-2" :messages="$errors->get('gender')" />
+            <!-- Gender -->
+            <div>
+                <x-input-label for="gender" :value="__('Gender')" />
+                <select id="gender" name="gender" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <option value="">Select Gender</option>
+                    <option value="male" {{ old('gender', $user->gender) == 'male' ? 'selected' : '' }}>Male</option>
+                    <option value="female" {{ old('gender', $user->gender) == 'female' ? 'selected' : '' }}>Female</option>
+                    <option value="other" {{ old('gender', $user->gender) == 'other' ? 'selected' : '' }}>Other</option>
+                </select>
+                <x-input-error class="mt-1" :messages="$errors->get('gender')" />
+            </div>
         </div>
 
         <!-- Customer Specific Fields -->
-        @if($user->isCustomer() && $user->customer)
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-                    {{ __('Additional Information') }}
-                </h3>
+        @if(method_exists($user, 'isCustomer') && $user->isCustomer() && $user->customer)
+            <div class="pt-5 mt-5 border-t border-gray-200">
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Additional Information</h3>
                 
                 <div class="space-y-4">
                     <!-- Birth Date -->
                     <div>
                         <x-input-label for="birth_date" :value="__('Birth Date')" />
-                        <x-text-input id="birth_date" name="birth_date" type="date" class="mt-1 block w-full" 
-                            :value="old('birth_date', $user->customer->birth_date ? $user->customer->birth_date->format('Y-m-d') : '')" 
+                        @php
+                            $birthDate = $user->customer->birth_date;
+                            $birthDateValue = $birthDate instanceof \Carbon\Carbon ? $birthDate->format('Y-m-d') : '';
+                        @endphp
+                        <x-text-input id="birth_date" name="birth_date" type="date" 
+                            :value="old('birth_date', $birthDateValue)" 
                             max="{{ now()->format('Y-m-d') }}" />
-                        <x-input-error class="mt-2" :messages="$errors->get('birth_date')" />
+                        <x-input-error class="mt-1" :messages="$errors->get('birth_date')" />
                     </div>
 
                     <!-- Notes -->
                     <div>
-                        <x-input-label for="notes" :value="__('Notes')" />
+                        <x-input-label for="notes" :value="__('Notes / Preferences')" />
                         <textarea id="notes" name="notes" rows="3" 
-                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">{{ old('notes', $user->customer->notes) }}</textarea>
-                        <x-input-error class="mt-2" :messages="$errors->get('notes')" />
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Optional notes about your preferences.') }}</p>
+                            class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Any preferences or notes for your visits...">{{ old('notes', $user->customer->notes) }}</textarea>
+                        <x-input-error class="mt-1" :messages="$errors->get('notes')" />
                     </div>
                 </div>
             </div>
         @endif
 
         <!-- Staff Specific Fields -->
-        @if($user->isStaff() && $user->staff)
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-                    {{ __('Staff Information') }}
-                </h3>
+        @if(method_exists($user, 'isStaff') && $user->isStaff() && $user->staff)
+            <div class="pt-5 mt-5 border-t border-gray-200">
+                <h3 class="text-sm font-semibold text-gray-900 mb-4">Staff Information</h3>
                 
-                <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <!-- Specialty (Read-only) -->
                     <div>
                         <x-input-label for="specialty" :value="__('Specialty')" />
-                        <x-text-input id="specialty" name="specialty" type="text" class="mt-1 block w-full" 
+                        <x-text-input id="specialty" name="specialty" type="text" 
                             :value="old('specialty', $user->staff->formatted_specialty)" disabled />
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {{ __('Contact an administrator to change your specialty.') }}
-                        </p>
+                        <p class="mt-1 text-xs text-gray-500">Contact admin to change specialty</p>
                     </div>
 
                     <!-- Color Code -->
                     <div>
-                        <x-input-label for="color_code" :value="__('Color Code')" />
-                        <div class="mt-1 flex items-center space-x-3">
+                        <x-input-label for="color_code" :value="__('Calendar Color')" />
+                        <div class="flex items-center gap-3">
                             <input type="color" id="color_code_picker"
                                 value="{{ old('color_code', $user->staff->color_code ?? '#3B82F6') }}"
                                 onchange="document.getElementById('color_code').value = this.value"
-                                class="h-10 w-20 border border-gray-300 dark:border-gray-700 rounded-md cursor-pointer">
+                                class="h-12 w-16 border border-gray-300 rounded-lg cursor-pointer">
                             <x-text-input type="text" id="color_code" name="color_code"
                                 value="{{ old('color_code', $user->staff->color_code ?? '#3B82F6') }}"
                                 oninput="document.getElementById('color_code_picker').value = this.value"
                                 pattern="^#[0-9A-Fa-f]{6}$"
-                                class="block w-full" placeholder="#3B82F6" />
+                                class="flex-1" placeholder="#3B82F6" />
                         </div>
-                        <x-input-error class="mt-2" :messages="$errors->get('color_code')" />
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Color used to identify you in the calendar.') }}</p>
+                        <x-input-error class="mt-1" :messages="$errors->get('color_code')" />
                     </div>
                 </div>
             </div>
         @endif
 
-        <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save') }}</x-primary-button>
+        <!-- Save Button -->
+        <div class="flex items-center gap-4 pt-4">
+            <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition">
+                <i class="fas fa-save mr-2"></i> Save Changes
+            </button>
 
             @if (session('status') === 'profile-updated')
-                <p
-                    x-data="{ show: true }"
-                    x-show="show"
-                    x-transition
-                    x-init="setTimeout(() => show = false, 2000)"
-                    class="text-sm text-gray-600 dark:text-gray-400"
-                >{{ __('Saved.') }}</p>
+                <p class="text-sm text-green-600 flex items-center animate-pulse">
+                    <i class="fas fa-check-circle mr-1"></i> Saved successfully!
+                </p>
             @endif
         </div>
     </form>

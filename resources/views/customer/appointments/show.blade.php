@@ -1,173 +1,266 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-900">Appointment Details</h1>
-            <a href="{{ route('customer.appointments.index') }}" 
-               class="text-sm text-blue-600 hover:text-blue-800">
-                &larr; Back to Appointments
-            </a>
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <!-- Back Navigation -->
+    <div class="mb-6">
+        <a href="{{ route('customer.appointments.index') }}" 
+           class="inline-flex items-center text-gray-600 hover:text-pink-600 transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Back to Appointments
+        </a>
+    </div>
+
+    @php
+        $statusConfig = [
+            'scheduled' => [
+                'color' => 'blue',
+                'gradient' => 'from-blue-500 to-indigo-600',
+                'bg' => 'bg-blue-50',
+                'text' => 'text-blue-700',
+                'border' => 'border-blue-200',
+                'icon' => 'fa-clock',
+                'label' => 'Scheduled'
+            ],
+            'confirmed' => [
+                'color' => 'green',
+                'gradient' => 'from-green-500 to-emerald-600',
+                'bg' => 'bg-green-50',
+                'text' => 'text-green-700',
+                'border' => 'border-green-200',
+                'icon' => 'fa-check-circle',
+                'label' => 'Confirmed'
+            ],
+            'in_progress' => [
+                'color' => 'yellow',
+                'gradient' => 'from-yellow-500 to-amber-600',
+                'bg' => 'bg-yellow-50',
+                'text' => 'text-yellow-700',
+                'border' => 'border-yellow-200',
+                'icon' => 'fa-spinner',
+                'label' => 'In Progress'
+            ],
+            'completed' => [
+                'color' => 'purple',
+                'gradient' => 'from-purple-500 to-indigo-600',
+                'bg' => 'bg-purple-50',
+                'text' => 'text-purple-700',
+                'border' => 'border-purple-200',
+                'icon' => 'fa-check-double',
+                'label' => 'Completed'
+            ],
+            'cancelled' => [
+                'color' => 'red',
+                'gradient' => 'from-red-500 to-rose-600',
+                'bg' => 'bg-red-50',
+                'text' => 'text-red-700',
+                'border' => 'border-red-200',
+                'icon' => 'fa-times-circle',
+                'label' => 'Cancelled'
+            ],
+            'failed' => [
+                'color' => 'orange',
+                'gradient' => 'from-orange-500 to-amber-600',
+                'bg' => 'bg-orange-50',
+                'text' => 'text-orange-700',
+                'border' => 'border-orange-200',
+                'icon' => 'fa-exclamation-triangle',
+                'label' => 'Failed'
+            ],
+            'no_show' => [
+                'color' => 'gray',
+                'gradient' => 'from-gray-500 to-slate-600',
+                'bg' => 'bg-gray-50',
+                'text' => 'text-gray-700',
+                'border' => 'border-gray-200',
+                'icon' => 'fa-user-slash',
+                'label' => 'No Show'
+            ],
+        ];
+        
+        $status = $statusConfig[$appointment->status ?? 'scheduled'] ?? $statusConfig['scheduled'];
+        $appointmentDate = \Carbon\Carbon::parse($appointment->start_datetime ?? now());
+        $endDate = $appointment->end_datetime ? \Carbon\Carbon::parse($appointment->end_datetime) : $appointmentDate->copy()->addMinutes(60);
+        $duration = $appointmentDate->diffInMinutes($endDate);
+        $hours = floor($duration / 60);
+        $minutes = $duration % 60;
+        $durationText = ($hours > 0 ? $hours . 'h ' : '') . ($minutes > 0 ? $minutes . 'm' : ($hours == 0 ? '0m' : ''));
+        
+        $isUpcoming = in_array($appointment->status, ['scheduled', 'confirmed']);
+        $canCancel = $isUpcoming && $appointmentDate->isFuture();
+        $canReschedule = $isUpcoming && $appointmentDate->diffInHours(now()) > 24;
+    @endphp
+
+    <!-- Appointment Detail Card -->
+    <div class="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+        <!-- Status Banner -->
+        <div class="bg-gradient-to-r {{ $status['gradient'] }} p-6 text-white">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4">
+                        <i class="fas {{ $status['icon'] }} text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-white/80 text-sm font-medium">Appointment Status</p>
+                        <h2 class="text-2xl font-bold">{{ $status['label'] }}</h2>
+                    </div>
+                </div>
+                <div class="mt-4 sm:mt-0 text-white/90">
+                    @if($appointmentDate->isFuture())
+                        <i class="fas fa-clock mr-2"></i>{{ $appointmentDate->diffForHumans() }}
+                    @elseif($appointmentDate->isPast())
+                        <i class="fas fa-history mr-2"></i>{{ $appointmentDate->diffForHumans() }}
+                    @else
+                        <i class="fas fa-sun mr-2"></i>Today
+                    @endif
+                </div>
+            </div>
         </div>
 
-        <!-- Appointment Card -->
-        <div class="bg-white rounded-lg shadow-md overflow-hidden">
-            <!-- Status Banner -->
-            @php
-                $statusColors = [
-                    'scheduled' => 'bg-blue-100 text-blue-800 border-blue-200',
-                    'confirmed' => 'bg-green-100 text-green-800 border-green-200',
-                    'completed' => 'bg-purple-100 text-purple-800 border-purple-200',
-                    'cancelled' => 'bg-red-100 text-red-800 border-red-200',
-                    'no_show' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                ];
-                $statusColor = $statusColors[$appointment->status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
-                $appointmentDate = \Carbon\Carbon::parse($appointment->start_datetime);
-                $endDate = \Carbon\Carbon::parse($appointment->end_datetime);
-                $duration = $appointmentDate->diffInMinutes($endDate);
-                $hours = floor($duration / 60);
-                $minutes = $duration % 60;
-                $durationText = ($hours > 0 ? $hours . 'h ' : '') . ($minutes > 0 ? $minutes . 'm' : '');
-            @endphp
-
-            <div class="border-b {{ $statusColor }} p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium">
-                            {{ ucfirst(str_replace('_', ' ', $appointment->status)) }}
+        <div class="p-8">
+            <!-- Service & Staff Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- Service Card -->
+                <div class="p-5 bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl border border-pink-100">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center mr-3">
+                            <i class="fas fa-spa text-white"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-pink-600 uppercase tracking-wide">Service</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">{{ $appointment->service->name ?? 'Service Unavailable' }}</h3>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">
+                            <i class="fas fa-clock mr-1"></i>{{ $durationText ?: 'N/A' }}
+                        </span>
+                        <span class="text-xl font-bold text-pink-600">
+                            ₱{{ number_format($appointment->total_amount ?? 0, 2) }}
                         </span>
                     </div>
-                    <div class="text-sm">
-                        @if($appointmentDate->isFuture())
-                            <span class="text-gray-600">Scheduled for {{ $appointmentDate->diffForHumans() }}</span>
-                        @elseif($appointmentDate->isPast())
-                            <span class="text-gray-600">Completed {{ $appointmentDate->diffForHumans() }}</span>
-                        @else
-                            <span class="text-gray-600">Today</span>
-                        @endif
+                </div>
+
+                <!-- Staff Card -->
+                <div class="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
+                    <div class="flex items-center mb-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        <span class="text-sm font-semibold text-blue-600 uppercase tracking-wide">Staff Member</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">{{ $appointment->staff?->user?->full_name ?? 'Unassigned' }}</h3>
+                    @if($appointment->staff && $appointment->staff->formatted_specialty)
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
+                            <i class="fas fa-star mr-2"></i>
+                            {{ $appointment->staff->formatted_specialty }} Specialist
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Date & Time Details -->
+            <div class="bg-gray-50 rounded-2xl p-6 mb-8">
+                <h3 class="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
+                    <i class="fas fa-calendar-alt text-gray-400 mr-2"></i>Appointment Schedule
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Date</p>
+                        <p class="text-lg font-bold text-gray-900">{{ $appointmentDate->format('l') }}</p>
+                        <p class="text-gray-600">{{ $appointmentDate->format('F j, Y') }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Time</p>
+                        <p class="text-lg font-bold text-gray-900">{{ $appointmentDate->format('g:i A') }}</p>
+                        <p class="text-gray-600">to {{ $endDate->format('g:i A') }}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Duration</p>
+                        <p class="text-lg font-bold text-gray-900">{{ $durationText }}</p>
+                        <p class="text-gray-600">{{ $duration }} minutes total</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Appointment Details -->
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Service Information -->
-                    <div class="space-y-4">
-                        <div>
-                            <h2 class="text-lg font-semibold text-gray-900 mb-4">Service Information</h2>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-500">Service</label>
-                                    <p class="mt-1 text-base text-gray-900">{{ $appointment->service->name }}</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-500">Duration</label>
-                                    <p class="mt-1 text-base text-gray-900">{{ $durationText }}</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-500">Price</label>
-                                    <p class="mt-1 text-lg font-semibold text-gray-900">₱{{ number_format($appointment->total_amount, 2) }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Notes Section -->
+            @if(!empty($appointment->notes))
+                <div class="bg-amber-50 rounded-2xl p-6 mb-8 border border-amber-200">
+                    <h3 class="text-sm font-semibold text-amber-700 uppercase tracking-wide mb-3">
+                        <i class="fas fa-sticky-note mr-2"></i>Special Requests / Notes
+                    </h3>
+                    <p class="text-gray-700">{{ $appointment->notes }}</p>
+                </div>
+            @endif
 
-                    <!-- Appointment Details -->
-                    <div class="space-y-4">
+            <!-- Payment Information -->
+            @if($appointment->payment)
+                <div class="bg-green-50 rounded-2xl p-6 mb-8 border border-green-200">
+                    <h3 class="text-sm font-semibold text-green-700 uppercase tracking-wide mb-4">
+                        <i class="fas fa-receipt mr-2"></i>Payment Information
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            <h2 class="text-lg font-semibold text-gray-900 mb-4">Appointment Details</h2>
-                            <div class="space-y-3">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-500">Date</label>
-                                    <p class="mt-1 text-base text-gray-900">{{ $appointmentDate->format('l, F j, Y') }}</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-500">Time</label>
-                                    <p class="mt-1 text-base text-gray-900">
-                                        {{ $appointmentDate->format('g:i A') }} - {{ $endDate->format('g:i A') }}
-                                    </p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-500">Staff Member</label>
-                                    <p class="mt-1 text-base text-gray-900">
-                                        {{ $appointment->staff->user->full_name ?? 'Unassigned' }}
-                                    </p>
-                                </div>
-                            </div>
+                            <p class="text-sm text-gray-500">Amount</p>
+                            <p class="text-lg font-bold text-gray-900">₱{{ number_format($appointment->payment->amount, 2) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Method</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ ucfirst($appointment->payment->method ?? 'N/A') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold 
+                                {{ $appointment->payment->status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
+                                {{ ucfirst($appointment->payment->status ?? 'Pending') }}
+                            </span>
                         </div>
                     </div>
                 </div>
+            @endif
+        </div>
 
-                <!-- Notes Section -->
-                @if(!empty($appointment->notes))
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h3 class="text-sm font-medium text-gray-500 mb-2">Special Requests / Notes</h3>
-                    <p class="text-base text-gray-900">{{ $appointment->notes }}</p>
-                </div>
+        <!-- Action Buttons -->
+        <div class="px-8 py-6 bg-gray-50 border-t border-gray-100">
+            <div class="flex flex-col sm:flex-row justify-end gap-3">
+                @if($canCancel)
+                    <form action="{{ route('customer.appointments.cancel', $appointment) }}" method="POST" class="w-full sm:w-auto">
+                        @csrf
+                        <button type="button" 
+                                onclick="if(confirm('Are you sure you want to cancel this appointment? This action cannot be undone.')) { this.form.submit(); }"
+                                class="w-full inline-flex items-center justify-center px-6 py-3 border-2 border-red-200 text-red-600 rounded-xl font-medium hover:bg-red-50 hover:border-red-300 transition-colors">
+                            <i class="fas fa-times-circle mr-2"></i>
+                            Cancel Appointment
+                        </button>
+                    </form>
                 @endif
 
-                <!-- Payment Information -->
-                @if($appointment->payment)
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h3 class="text-sm font-medium text-gray-500 mb-2">Payment Information</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Amount</label>
-                            <p class="mt-1 text-base text-gray-900">₱{{ number_format($appointment->payment->amount, 2) }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Method</label>
-                            <p class="mt-1 text-base text-gray-900">{{ ucfirst($appointment->payment->method ?? 'N/A') }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500">Status</label>
-                            <p class="mt-1 text-base text-gray-900">{{ ucfirst($appointment->payment->status ?? 'N/A') }}</p>
-                        </div>
-                    </div>
-                </div>
-                @endif
-
-                <!-- Action Buttons -->
-                <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
-                    @php
-                        $isUpcoming = $appointment->status === 'scheduled' || $appointment->status === 'confirmed';
-                        $canCancel = $isUpcoming && $appointmentDate->isFuture();
-                        $canReschedule = $isUpcoming && $appointmentDate->diffInHours(now()) > 24;
-                    @endphp
-
-                    @if($canCancel)
-                        <form action="{{ route('customer.appointments.cancel', $appointment) }}" method="POST" class="w-full sm:w-auto">
-                            @csrf
-                            <button type="button" 
-                                    onclick="if(confirm('Are you sure you want to cancel this appointment?')) { this.form.submit(); }"
-                                    class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                                <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                                Cancel Appointment
-                            </button>
-                        </form>
-                    @endif
-
-                    @if($canReschedule)
-                        <a href="{{ route('customer.appointments.create') }}?service_id={{ $appointment->service_id }}&staff_id={{ $appointment->staff_id }}" 
-                           class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
-                            </svg>
-                            Reschedule
-                        </a>
-                    @endif
-
-                    <a href="{{ route('customer.appointments.index') }}" 
-                       class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Back to Appointments
+                @if($canReschedule)
+                    <a href="{{ route('customer.appointments.create') }}?service_id={{ $appointment->service_id }}&staff_id={{ $appointment->staff_id }}" 
+                       class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        Reschedule
                     </a>
-                </div>
+                @endif
+
+                <a href="{{ route('customer.appointments.index') }}" 
+                   class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Appointments
+                </a>
             </div>
+        </div>
+    </div>
+
+    <!-- Booking Another Appointment CTA -->
+    <div class="mt-8 bg-gradient-to-r from-pink-500 via-rose-500 to-orange-400 rounded-2xl p-8 text-white text-center relative overflow-hidden">
+        <div class="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        <div class="relative z-10">
+            <h3 class="text-xl font-bold mb-2">Need Another Appointment?</h3>
+            <p class="text-pink-100 mb-4">Book your next spa session and continue your wellness journey</p>
+            <a href="{{ route('customer.staff') }}" 
+               class="inline-flex items-center px-6 py-3 bg-white text-pink-600 rounded-xl font-semibold hover:bg-pink-50 transition-colors shadow-lg">
+                <i class="fas fa-calendar-plus mr-2"></i>
+                Book Now
+            </a>
         </div>
     </div>
 </div>

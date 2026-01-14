@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+@extends('layouts.staff')
 
 @section('title', 'Staff Dashboard - Belleza Rosa')
 
@@ -112,7 +112,7 @@
                                         <div class="text-sm text-gray-500">{{ $appointment->customer->phone }}</div>
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-900">
-                                        {{ $appointment->service->name }}
+                                        {{ $appointment->service->name ?? 'Service Unavailable' }}
                                         <div class="text-xs text-gray-500">
                                             ₱{{ number_format($appointment->total_amount, 2) }}</div>
                                     </td>
@@ -217,7 +217,7 @@
                                     <div>
                                         <div class="font-medium text-gray-900">{{ $appointment->customer->full_name }}
                                         </div>
-                                        <div class="text-sm text-gray-500">{{ $appointment->service->name }}</div>
+                                        <div class="text-sm text-gray-500">{{ $appointment->service->name ?? 'Service Unavailable' }}</div>
                                     </div>
                                 </div>
                                 <div class="text-right">
@@ -281,8 +281,8 @@
                                     @if ($appointment->status == 'completed')
                                         <div class="mb-3 p-3 border border-gray-200 rounded-lg">
                                             <div class="flex justify-between items-center mb-2">
-                                                <div class="font-medium">{{ $appointment->service->name }}</div>
-                                                <div class="text-sm text-gray-500">{{ $appointment->customer->full_name }}
+                                                <div class="font-medium">{{ $appointment->service->name ?? 'Service Unavailable' }}</div>
+                                                <div class="text-sm text-gray-500">{{ $appointment->customer->full_name ?? 'N/A' }}
                                                 </div>
                                             </div>
                                             <div class="flex items-center justify-between text-sm">
@@ -348,7 +348,7 @@
 
         // Update statistics periodically
         function updateStaffStatistics() {
-            fetch('{{ route('staff.statistics') }}')
+            fetch('{{ route("staff.statistics") }}')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {

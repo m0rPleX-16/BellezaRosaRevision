@@ -38,7 +38,7 @@ class StaffController extends Controller
             ->orderBy('start_datetime')
             ->get()
             ->map(function ($appointment) {
-                $appointment->duration = $appointment->service->duration_minutes;
+                $appointment->duration = $appointment->service->duration_minutes ?? 0;
                 return $appointment;
             });
 

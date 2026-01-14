@@ -148,8 +148,8 @@
                                     <div class="text-sm text-gray-500">{{ $commission->staff->formatted_specialty }}</div>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-900">
-                                    {{ $commission->appointment->service->name }}
-                                    <div class="text-xs text-gray-500">{{ $commission->appointment->customer->full_name }}
+                                    {{ $commission->appointment->service->name ?? 'Service Unavailable' }}
+                                    <div class="text-xs text-gray-500">{{ $commission->appointment->customer->full_name ?? 'N/A' }}
                                     </div>
                                 </td>
                                 <td class="px-4 py-3 text-sm font-semibold text-gray-900">
@@ -251,7 +251,7 @@
                                     <div class="flex-1">
                                         <div class="font-medium">{{ $commission->staff->user->full_name }}</div>
                                         <div class="text-sm text-gray-500">
-                                            {{ $commission->appointment->service->name }} -
+                                            {{ $commission->appointment->service->name ?? 'Service Unavailable' }} -
                                             ₱{{ number_format($commission->amount, 2) }}
                                         </div>
                                     </div>

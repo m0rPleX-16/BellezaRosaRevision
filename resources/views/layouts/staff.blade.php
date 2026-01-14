@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard - Belleza Rosa')</title>
+    <title>@yield('title', 'Staff Dashboard - Belleza Rosa')</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -142,24 +142,7 @@
                 aria-current="{{ request()->is('dashboard') ? 'page' : 'false' }}">
                 <i class="fas fa-home mr-3"></i> Dashboard
             </a>
-            <a class="nav-item {{ request()->is('dashboard/appointments*') ? 'active' : '' }}"
-                href="{{ route('dashboard.appointments.index') }}"
-                aria-current="{{ request()->is('dashboard/appointments*') ? 'page' : 'false' }}">
-                <i class="fas fa-calendar-check mr-3"></i> Appointments
-            </a>
 
-            <a class="nav-item {{ request()->is('dashboard/payments*') ? 'active' : '' }}"
-                href="{{ route('dashboard.payments.index') }}"
-                aria-current="{{ request()->is('dashboard/payments*') ? 'page' : 'false' }}">
-                <i class="fas fa-money-bill-wave mr-3"></i> Payments
-            </a>
-            @if (auth()->user()->isAdmin())
-                <a class="nav-item {{ request()->is('dashboard/commissions*') ? 'active' : '' }}"
-                    href="{{ route('dashboard.commissions.index') }}"
-                    aria-current="{{ request()->is('dashboard/commissions*') ? 'page' : 'false' }}">
-                    <i class="fas fa-hand-holding-usd mr-3"></i> Commissions
-                </a>
-            @endif
             @if (auth()->user()->isStaff())
                 <a class="nav-item {{ request()->is('staff/commission*') ? 'active' : '' }}"
                     href="{{ route('staff.commission') }}"
@@ -172,6 +155,7 @@
                     <i class="fas fa-calendar-week mr-3"></i> Weekly Schedule
                 </a>
             @endif
+
             <a class="nav-item {{ request()->is('dashboard/services*') ? 'active' : '' }}"
                 href="{{ route('dashboard.services.index') }}"
                 aria-current="{{ request()->is('dashboard/services*') ? 'page' : 'false' }}">
@@ -182,25 +166,7 @@
                 aria-current="{{ request()->is('dashboard/inventory*') ? 'page' : 'false' }}">
                 <i class="fas fa-boxes mr-3"></i> Inventory
             </a>
-            @if (auth()->user()->isAdmin())
-                <a class="nav-item {{ request()->is('dashboard/users*') ? 'active' : '' }}"
-                    href="{{ route('dashboard.users.index') }}"
-                    aria-current="{{ request()->is('dashboard/users*') ? 'page' : 'false' }}">
-                    <i class="fas fa-users-cog mr-3"></i> Manage Staff
-                </a>
-            @endif
-            @if (auth()->user()->isAdmin())
-                <a class="nav-item {{ request()->is('dashboard/reports*') ? 'active' : '' }}"
-                    href="{{ route('dashboard.reports.index') }}"
-                    aria-current="{{ request()->is('dashboard/reports*') ? 'page' : 'false' }}">
-                    <i class="fas fa-chart-bar mr-3"></i> Reports
-                </a>
-                <a class="nav-item {{ request()->is('dashboard/settings*') ? 'active' : '' }}"
-                    href="{{ route('dashboard.settings.index') }}"
-                    aria-current="{{ request()->is('dashboard/settings*') ? 'page' : 'false' }}">
-                    <i class="fas fa-cog mr-3"></i> Salon Settings
-                </a>
-            @endif
+
             <a class="nav-item {{ request()->is('profile*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"
                 aria-current="{{ request()->is('profile*') ? 'page' : 'false' }}">
                 <i class="fas fa-user-circle mr-3"></i> Profile
@@ -235,16 +201,16 @@
 
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-4">
-        @if(session('success'))
+        @if (session('success'))
             <x-toast type="success" :message="session('success')" />
         @endif
-        
-        @if(session('error'))
+
+        @if (session('error'))
             <x-toast type="error" :message="session('error')" />
         @endif
-        
-        @if($errors->any())
-            @foreach($errors->all() as $error)
+
+        @if ($errors->any())
+            @foreach ($errors->all() as $error)
                 <x-toast type="error" :message="$error" />
             @endforeach
         @endif
@@ -269,7 +235,6 @@
         document.body.style.overflow = '';
     }
 
-    // Close sidebar when resizing up to desktop
     window.addEventListener('resize', () => {
         if (window.innerWidth > 1024) {
             closeSidebar();
@@ -296,4 +261,6 @@
 </script>
 
 @stack('scripts')
+
 </html>
+

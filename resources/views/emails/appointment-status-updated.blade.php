@@ -57,10 +57,10 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Appointment Details</h2>
             <div class="space-y-2">
-                <p><span class="font-medium">Service:</span> {{ $appointment->service->name }}</p>
+                <p><span class="font-medium">Service:</span> {{ $appointment->service->name ?? 'Service Unavailable' }}</p>
                 <p><span class="font-medium">Date & Time:</span> {{ $appointment->start_datetime->format('l, F j, Y \a\t h:i A') }}</p>
-                <p><span class="font-medium">Duration:</span> {{ $appointment->service->duration }} minutes</p>
-                <p><span class="font-medium">Staff:</span> {{ $appointment->staff->name ?? 'To be assigned' }}</p>
+                <p><span class="font-medium">Duration:</span> {{ $appointment->service->duration_minutes ?? 0 }} minutes</p>
+                <p><span class="font-medium">Staff:</span> {{ $appointment->staff->user->full_name ?? 'To be assigned' }}</p>
                 <p><span class="font-medium">Status:</span> 
                     <span class="px-2 py-1 text-xs font-medium rounded-full {{ $statusColor }}">
                         {{ ucfirst($appointment->status) }}
