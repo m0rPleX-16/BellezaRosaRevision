@@ -3,11 +3,25 @@
     $statusColors = [
         'scheduled' => 'bg-blue-100 text-blue-800',
         'confirmed' => 'bg-green-100 text-green-800',
+        'in_progress' => 'bg-yellow-100 text-yellow-800',
         'completed' => 'bg-purple-100 text-purple-800',
         'cancelled' => 'bg-red-100 text-red-800',
+        'failed' => 'bg-orange-100 text-orange-800',
         'no_show' => 'bg-yellow-100 text-yellow-800',
     ];
     $statusColor = $statusColors[$appointment->status] ?? 'bg-gray-100 text-gray-800';
+    
+    // Format status display name
+    $statusDisplayNames = [
+        'scheduled' => 'Scheduled',
+        'confirmed' => 'Confirmed',
+        'in_progress' => 'In Progress',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+        'failed' => 'Failed',
+        'no_show' => 'No Show',
+    ];
+    $statusDisplayName = $statusDisplayNames[$appointment->status] ?? ucfirst($appointment->status);
     
     // Format the date and time
     $appointmentDate = \Carbon\Carbon::parse($appointment->start_datetime);
@@ -15,9 +29,9 @@
     $formattedTime = $appointmentDate->format('g:i A');
     
     // Check if the appointment is upcoming and can be cancelled
-    $isUpcoming = $appointment->status === 'scheduled' || $appointment->status === 'confirmed';
-    $canCancel = $isUpcoming && $appointmentDate->isFuture();
-    $canReschedule = $isUpcoming && $appointmentDate->diffInHours(now()) > 24; // Can reschedule if more than 24h in advance
+    $isUpcoming = in_array($appointment->status, ['scheduled', 'confirmed', 'in_progress']);
+    $canCancel = in_array($appointment->status, ['scheduled', 'confirmed']) && $appointmentDate->isFuture();
+    $canReschedule = in_array($appointment->status, ['scheduled', 'confirmed']) && $appointmentDate->diffInHours(now()) > 24; // Can reschedule if more than 24h in advance
     
     // Calculate time until appointment
     $timeUntil = $appointmentDate->diffForHumans(now(), [
@@ -66,7 +80,7 @@
                         <!-- Status and Time -->
                         <div class="mt-2 flex flex-wrap items-center gap-2">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColor }}">
-                                {{ ucfirst($appointment->status) }}
+                                {{ $statusDisplayName }}
                             </span>
                             
                             @if($isToday)
@@ -128,9 +142,8 @@
         <!-- Action buttons -->
         <div class="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
             @if($canCancel)
-                <form action="{{ route('appointments.cancel', $appointment) }}" method="POST" class="w-full sm:w-auto">
+                <form action="{{ route('customer.appointments.cancel', $appointment) }}" method="POST" class="w-full sm:w-auto">
                     @csrf
-                    @method('PATCH')
                     <button type="button" 
                             onclick="if(confirm('Are you sure you want to cancel this appointment?')) { this.form.submit(); }"
                             class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
@@ -143,7 +156,7 @@
             @endif
             
             @if($canReschedule)
-                <a href="{{ route('appointments.edit', $appointment) }}" 
+                <a href="{{ route('customer.appointments.create') }}?service_id={{ $appointment->service_id }}&staff_id={{ $appointment->staff_id }}" 
                    class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                     <svg class="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
@@ -152,7 +165,7 @@
                 </a>
             @endif
             
-            <a href="{{ route('appointments.show', $appointment) }}" 
+            <a href="{{ route('customer.appointments.show', $appointment) }}" 
                class="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                 <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />

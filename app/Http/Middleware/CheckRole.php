@@ -40,6 +40,11 @@ class CheckRole
 
         // Check if user has any of the required roles
         if (!in_array($userRole, $normalizedAllowedRoles)) {
+            // If customer is trying to access dashboard/appointments, redirect them to customer appointments
+            if ($user->isCustomer() && str_starts_with($request->path(), 'dashboard/appointments')) {
+                return redirect()->route('customer.appointments.index');
+            }
+            
             abort(403, 'Unauthorized access. User role: "' . $user->role . '", Required roles: ' . implode(', ', $allowedRoles));
         }
 
@@ -104,6 +109,11 @@ class CheckRole
             return $next($request);
         }
 
+        // Redirect customers trying to access dashboard appointments to their own appointments page
+        if (str_starts_with($request->path(), 'dashboard/appointments')) {
+            return redirect()->route('customer.appointments.index');
+        }
+
         // Deny access to admin routes
         if (str_starts_with($request->path(), 'dashboard') && 
             !$request->routeIs('dashboard.index')) {
@@ -160,12 +170,27 @@ class CheckRole
         // For update/delete actions, check if appointment belongs to staff
         if ($request->routeIs('*.update') || $request->routeIs('*.destroy') || 
             $request->routeIs('*.status')) {
-            $appointmentId = $request->route('appointment');
-            if ($appointmentId) {
-                $appointment = Appointment::findOrFail($appointmentId);
-                if ($appointment->staff_id !== $staff->id) {
-                    abort(403, 'You can only modify your own appointments.');
+            $appointmentParam = $request->route('appointment');
+            
+            // Handle both model binding (Appointment instance) and ID (string/int)
+            if ($appointmentParam instanceof Appointment) {
+                $appointment = $appointmentParam;
+            } elseif ($appointmentParam) {
+                // Try to find appointment by ID
+                try {
+                    $appointment = Appointment::findOrFail($appointmentParam);
+                } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+                    // If appointment not found, let route model binding handle the 404
+                    // Don't interfere here
+                    $appointment = null;
                 }
+            } else {
+                $appointment = null;
+            }
+            
+            // Only check ownership if we have a valid appointment
+            if ($appointment && $appointment->staff_id !== $staff->id) {
+                abort(403, 'You can only modify your own appointments.');
             }
         }
     }

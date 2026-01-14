@@ -77,7 +77,9 @@ class AppointmentStatusUpdated extends Notification implements ShouldQueue
                 'status' => $this->status,
                 'message' => $this->message,
                 'notifiable' => $notifiable,
-                'actionUrl' => route('dashboard.appointments.show', $appointment->id)
+                'actionUrl' => $appointment->customer && $appointment->customer->user 
+                    ? route('customer.appointments.show', $appointment->id)
+                    : route('dashboard.appointments.show', $appointment->id)
             ]);
     }
 
@@ -97,7 +99,9 @@ class AppointmentStatusUpdated extends Notification implements ShouldQueue
             'staff_name' => $this->appointment->staff->name ?? 'Not Assigned',
             'amount' => $this->appointment->total_amount,
             'type' => 'appointment_status_update',
-            'action_url' => route('dashboard.appointments.show', $this->appointment->id)
+            'action_url' => $this->appointment->customer && $this->appointment->customer->user 
+                ? route('customer.appointments.show', $this->appointment->id)
+                : route('dashboard.appointments.show', $this->appointment->id)
         ];
     }
 }

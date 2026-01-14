@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\StaffController;
@@ -61,6 +62,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/', [AppointmentController::class, 'store'])->name('store');
             Route::get('/{appointment}', [AppointmentController::class, 'show'])->name('show');
             Route::post('/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('cancel');
+            Route::post('/check-availability', [AppointmentController::class, 'checkAvailability'])->name('checkAvailability');
         });
 
         Route::get('/customer/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -120,11 +122,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('index');
 
         // Appointments
-        Route::resource('appointments', AppointmentController::class)->except(['destroy']);
+        // Define specific routes BEFORE resource routes to avoid conflicts
         Route::post('appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
         Route::get('appointments/{appointment}/cancel', [AppointmentController::class, 'showCancelForm'])->name('appointments.cancel.form');
         Route::post('appointments/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('appointments.cancel');
         Route::post('appointments/check-availability', [AppointmentController::class, 'checkAvailability'])->name('appointments.checkAvailability');
+        // Resource route must come after specific routes
+        Route::resource('appointments', AppointmentController::class)->except(['destroy']);
 
         // Services
         Route::resource('services', ServiceController::class);
@@ -146,6 +150,19 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/inventory', [ReportsController::class, 'inventory'])->name('inventory');
             Route::post('/download', [ReportsController::class, 'download'])->name('download');
             Route::get('/financial', [ReportsController::class, 'financial'])->name('financial');
+        });
+
+        // Commissions (Admin only)
+        Route::middleware(['role:admin'])->prefix('commissions')->name('commissions.')->group(function () {
+            Route::get('/', [CommissionController::class, 'index'])->name('index');
+            // Specific routes must come before parameterized routes
+            Route::get('/settings', [CommissionController::class, 'showSettings'])->name('settings');
+            Route::post('/settings', [CommissionController::class, 'updateSettings'])->name('settings.update');
+            Route::get('/report/generate', [CommissionController::class, 'generateReport'])->name('report');
+            Route::post('/bulk-pay', [CommissionController::class, 'payCommissions'])->name('bulk-pay');
+            // Parameterized routes come last
+            Route::get('/{commission}', [CommissionController::class, 'show'])->name('show');
+            Route::post('/{commission}/pay', [CommissionController::class, 'paySingle'])->name('pay');
         });
 
         // Inventory

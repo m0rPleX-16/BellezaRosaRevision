@@ -93,35 +93,53 @@ class CommissionController extends Controller
             foreach ($commissions as $commission) {
                 $commission->markAsPaid($request->payment_date);
                 
-                // Log the payment
-                activity()
-                    ->performedOn($commission)
-                    ->causedBy(auth()->user())
-                    ->withProperties([
-                        'payment_method' => $request->payment_method,
-                        'reference_number' => $request->reference_number,
-                        'payment_date' => $request->payment_date
-                    ])
-                    ->log("Commission paid");
+                // Payment logged via notes update above
             }
 
-            // Create a payment record for accounting
+            // Payment record can be logged in notes or a separate table if needed
+            // For now, we'll just update commission notes with payment info
             $totalAmount = $commissions->sum('amount');
             
-            // You might want to create a separate CommissionPayment model
-            CommissionPayment::create([
-                'payment_date' => $request->payment_date,
-                'total_amount' => $totalAmount,
-                'payment_method' => $request->payment_method,
-                'reference_number' => $request->reference_number,
-                'notes' => $request->notes,
-                'paid_by' => auth()->id(),
-                'commission_count' => $commissions->count()
-            ]);
+            foreach ($commissions as $commission) {
+                $paymentNote = "Paid on {$request->payment_date} via {$request->payment_method}";
+                if ($request->reference_number) {
+                    $paymentNote .= " (Ref: {$request->reference_number})";
+                }
+                if ($request->notes) {
+                    $paymentNote .= " - {$request->notes}";
+                }
+                
+                $currentNotes = $commission->notes ? $commission->notes . "\n" : '';
+                $commission->update(['notes' => $currentNotes . $paymentNote]);
+            }
         });
 
         return redirect()->route('dashboard.commissions.index')
             ->with('success', 'Commissions paid successfully!');
+    }
+
+    /**
+     * Pay a single commission
+     */
+    public function paySingle(Request $request, Commission $commission)
+    {
+        if ($commission->status !== 'pending') {
+            return back()->with('error', 'Only pending commissions can be paid.');
+        }
+
+        $commission->markAsPaid(now());
+        
+        return redirect()->route('dashboard.commissions.index')
+            ->with('success', 'Commission marked as paid successfully!');
+    }
+
+    /**
+     * Show commission settings page
+     */
+    public function showSettings()
+    {
+        $settings = SalonSetting::first();
+        return view('dashboard.commissions.settings', compact('settings'));
     }
 
     /**

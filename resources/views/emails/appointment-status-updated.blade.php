@@ -108,14 +108,14 @@
 
         <!-- Action Buttons -->
         <div class="mt-8 text-center">
-            @component('mail::button', ['url' => route('appointments.show', $appointment->id)])
+            @component('mail::button', ['url' => route('customer.appointments.show', $appointment->id)])
                 View Appointment
             @endcomponent
             
             @if(in_array($appointment->status, ['scheduled', 'confirmed']))
                 <div class="mt-4">
                     @component('mail::button', [
-                        'url' => route('appointments.reschedule', $appointment->id),
+                        'url' => route('customer.appointments.create', ['service_id' => $appointment->service_id, 'staff_id' => $appointment->staff_id]),
                         'color' => 'gray'
                     ])
                         Reschedule Appointment
@@ -124,10 +124,10 @@
                 
                 <div class="mt-4">
                     @component('mail::button', [
-                        'url' => route('appointments.cancel', $appointment->id),
+                        'url' => route('customer.appointments.index'),
                         'color' => 'red'
                     ])
-                        Cancel Appointment
+                        Manage Appointments
                     @endcomponent
                 </div>
             @endif

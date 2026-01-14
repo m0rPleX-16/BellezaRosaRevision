@@ -15,7 +15,10 @@ class SalonSetting extends Model
         'closing_time', 
         'slot_interval_minutes',
         'max_days_book_ahead',
-        'cancel_cutoff_hours'
+        'cancel_cutoff_hours',
+        'commission_rate',
+        'default_commission_rate',
+        'commission_payment_day'
     ];
 
     protected $attributes = [

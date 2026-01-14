@@ -147,7 +147,7 @@ class PaymentController extends Controller
                 'appointment_id' => $appointment->id,
                 'customer_id' => $appointment->customer_id,
                 'amount' => $request->amount,
-                'method' => $request->method(),
+                'method' => $request->input('method'),
                 'reference_number' => $request->reference_number,
                 'payment_details' => $request->payment_details ?? [],
                 'status' => $request->status,
@@ -166,23 +166,12 @@ class PaymentController extends Controller
 
             // Update appointment payment method
             $appointment->update([
-                'payment_method' => $request->method()
+                'payment_method' => $request->input('method')
             ]);
 
             // If payment is marked as paid, create commission
             if ($request->status === 'paid') {
                 $this->createCommission($appointment, $payment);
-
-                // Log the payment
-                activity()
-                    ->performedOn($payment)
-                    ->causedBy(auth()->user())
-                    ->withProperties([
-                        'amount' => $payment->amount,
-                        'method' => $payment->method,
-                        'reference' => $payment->reference_number
-                    ])
-                    ->log('Payment recorded');
             }
 
             DB::commit();
@@ -248,7 +237,6 @@ class PaymentController extends Controller
                 $updateData['notes'] = $request->notes;
             }
 
-            $oldStatus = $payment->status;
             $payment->update($updateData);
             
             // If status changed, notify the customer
@@ -366,17 +354,22 @@ class PaymentController extends Controller
         }
 
         $salonSettings = SalonSetting::first();
-        if (!$salonSettings || !$salonSettings->commission_rate) {
+        // Check both commission_rate and default_commission_rate for backward compatibility
+        $commissionRate = $salonSettings->commission_rate ?? $salonSettings->default_commission_rate ?? null;
+        
+        if (!$salonSettings || !$commissionRate) {
             return; // No commission rate set
         }
 
-        $commissionAmount = ($salonSettings->commission_rate / 100) * $payment->amount;
+        $commissionAmount = ($commissionRate / 100) * $payment->amount;
 
         Commission::create([
             'appointment_id' => $appointment->id,
             'staff_id' => $appointment->staff_id,
+            'service_amount' => $payment->amount,
+            'commission_rate' => $commissionRate,
             'amount' => $commissionAmount,
-            'status' => 'unpaid'
+            'status' => 'pending'
         ]);
     }
 }

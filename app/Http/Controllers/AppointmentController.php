@@ -9,6 +9,7 @@ use App\Models\Staff;
 use App\Models\Payment;
 use App\Models\SalonSetting;
 use App\Helpers\ToastHelper;
+use App\Notifications\AppointmentStatusUpdated;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Http\Request;
@@ -61,36 +62,56 @@ class AppointmentController extends Controller
     {
         $customer = auth()->user()->customer;
 
-        // Get upcoming appointments (scheduled or confirmed and in the future)
+        // Get upcoming appointments (scheduled, confirmed, in_progress - future appointments)
         $upcomingAppointments = $customer->appointments()
             ->with(['service', 'staff'])
-            ->whereIn('status', ['scheduled', 'confirmed'])
+            ->whereIn('status', ['scheduled', 'confirmed', 'in_progress'])
             ->where('start_datetime', '>=', now())
             ->orderBy('start_datetime', 'asc')
             ->get();
 
-        // Get past appointments (completed or in the past)
+        // Get past appointments (completed or past dates, excluding cancelled/failed/no_show)
         $pastAppointments = $customer->appointments()
             ->with(['service', 'staff'])
             ->where(function ($query) {
                 $query->where('status', 'completed')
-                    ->orWhere('start_datetime', '<', now());
+                    ->orWhere(function ($q) {
+                        // Past dates with active statuses
+                        $q->where('start_datetime', '<', now())
+                          ->whereIn('status', ['scheduled', 'confirmed', 'in_progress', 'completed']);
+                    });
             })
-            ->whereNotIn('status', ['scheduled', 'confirmed', 'cancelled'])
+            ->whereNotIn('status', ['cancelled', 'failed', 'no_show'])
             ->orderBy('start_datetime', 'desc')
             ->paginate(10);
 
-        // Get cancelled appointments
+        // Get cancelled appointments (cancelled status)
         $cancelledAppointments = $customer->appointments()
             ->with(['service', 'staff'])
             ->where('status', 'cancelled')
             ->orderBy('start_datetime', 'desc')
             ->paginate(10);
 
+        // Get failed appointments (failed status)
+        $failedAppointments = $customer->appointments()
+            ->with(['service', 'staff'])
+            ->where('status', 'failed')
+            ->orderBy('start_datetime', 'desc')
+            ->paginate(10);
+
+        // Get no-show appointments (no_show status)
+        $noShowAppointments = $customer->appointments()
+            ->with(['service', 'staff'])
+            ->where('status', 'no_show')
+            ->orderBy('start_datetime', 'desc')
+            ->paginate(10);
+
         return view('customer.appointments.index', compact(
             'upcomingAppointments',
             'pastAppointments',
-            'cancelledAppointments'
+            'cancelledAppointments',
+            'failedAppointments',
+            'noShowAppointments'
         ));
     }
 
@@ -222,6 +243,30 @@ class AppointmentController extends Controller
         ));
     }
 
+    public function show(Appointment $appointment)
+    {
+        // Load relationships
+        $appointment->load(['customer', 'service', 'staff.user', 'payment']);
+        
+        // Check if this is a customer route - ensure customer can only view their own appointments
+        if (request()->routeIs('customer.*')) {
+            $customer = auth()->user()->customer;
+            
+            if (!$customer || $appointment->customer_id !== $customer->id) {
+                abort(403, 'You can only view your own appointments.');
+            }
+            
+            return view('customer.appointments.show', compact('appointment'));
+        }
+        
+        // For admin/staff routes, check permissions
+        if (auth()->user()->isStaff() && $appointment->staff_id !== auth()->user()->staff->id) {
+            abort(403, 'You can only view your own appointments.');
+        }
+        
+        return view('dashboard.appointments.show', compact('appointment'));
+    }
+
     public function edit(Appointment $appointment)
     {
         $customers = Customer::all();
@@ -261,9 +306,14 @@ class AppointmentController extends Controller
         
         if ($request->has('start_datetime') && $request->start_datetime) {
             $startDatetime = $request->start_datetime;
-        } elseif ($request->has('appointment_date') && $request->has('appointment_time')) {
+        } elseif ($request->has('appointment_date') && $request->has('appointment_time') && $request->appointment_time) {
             // Combine date and time
-            $startDatetime = $request->appointment_date . ' ' . $request->appointment_time;
+            $time = $request->appointment_time;
+            // Ensure time has seconds (H:i:s format)
+            if (strlen($time) === 5) { // H:i format (e.g., "14:30")
+                $time .= ':00'; // Add seconds
+            }
+            $startDatetime = $request->appointment_date . ' ' . $time;
         }
         
         $request->merge(['start_datetime' => $startDatetime]);
@@ -336,7 +386,14 @@ class AppointmentController extends Controller
             'end_datetime' => $endDateTime,
             'total_amount' => $service->price_premium ?? $service->price_regular,
             'status' => 'scheduled',
+            'notes' => $request->notes ?? null,
         ]);
+
+        // Redirect based on the route - customer or admin/staff
+        if (request()->routeIs('customer.*')) {
+            return redirect()->route('customer.appointments.index')
+                ->with('success', 'Appointment booked successfully!');
+        }
 
         return redirect()->route('dashboard.appointments.index')
             ->with('success', 'Appointment created successfully!');
@@ -412,79 +469,121 @@ class AppointmentController extends Controller
      */
     public function checkAvailability(Request $request)
     {
-        $request->validate([
-            'staff_id' => 'required|exists:staff,id',
-            'date' => 'required|date',
-            'service_id' => 'nullable|exists:services,id',
-        ]);
-
-        $staffId = $request->staff_id;
-        $selectedDate = $request->date;
-        $serviceId = $request->service_id;
-        
-        // Get salon settings
-        $salonSettings = SalonSetting::getSettings();
-        $openingTime = $salonSettings->opening_time ?? '09:00:00';
-        $closingTime = $salonSettings->closing_time ?? '20:00:00';
-        $interval = $salonSettings->slot_interval_minutes ?? 30;
-        
-        // Get service duration if service_id is provided
-        $serviceDuration = 60; // Default 60 minutes
-        if ($serviceId) {
-            $service = Service::find($serviceId);
-            if ($service) {
-                $serviceDuration = max($service->duration_minutes, 30); // Minimum 30 minutes
-            }
+        try {
+            $request->validate([
+                'staff_id' => 'required|exists:staff,id',
+                'date' => 'required|date',
+                'service_id' => 'nullable|exists:services,id',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'message' => $e->getMessage(),
+                'errors' => $e->errors()
+            ], 422);
         }
-        
-        // Get existing appointments for the selected staff and date
-        $appointments = Appointment::where('staff_id', $staffId)
-            ->whereDate('start_datetime', $selectedDate)
-            ->whereNotIn('status', ['cancelled', 'no_show'])
-            ->get(['start_datetime', 'end_datetime']);
-        
-        // Generate time slots based on service duration
-        $start = Carbon::parse($selectedDate . ' ' . $openingTime);
-        $end = Carbon::parse($selectedDate . ' ' . $closingTime);
-        $timeSlots = [];
-        
-        while ($start->lt($end)) {
-            // Calculate when the appointment would end
-            $appointmentEnd = $start->copy()->addMinutes($serviceDuration);
+
+        try {
+            $staffId = $request->staff_id;
+            $selectedDate = $request->date;
+            $serviceId = $request->service_id;
             
-            // Skip if appointment would end after closing time
-            if ($appointmentEnd->gt($end)) {
-                $start->addMinutes($interval);
-                continue;
+            // Get salon settings
+            $salonSettings = SalonSetting::getSettings();
+            // Ensure times are strings (TIME columns might return as objects)
+            $openingTime = is_string($salonSettings->opening_time) 
+                ? $salonSettings->opening_time 
+                : (string)$salonSettings->opening_time ?? '09:00:00';
+            $closingTime = is_string($salonSettings->closing_time) 
+                ? $salonSettings->closing_time 
+                : (string)$salonSettings->closing_time ?? '20:00:00';
+            $interval = $salonSettings->slot_interval_minutes ?? 30;
+            
+            // Ensure time format is H:i:s
+            if (strlen($openingTime) === 5) {
+                $openingTime .= ':00';
+            }
+            if (strlen($closingTime) === 5) {
+                $closingTime .= ':00';
             }
             
-            $isAvailable = true;
-            
-            // Check if the time slot conflicts with existing appointments
-            foreach ($appointments as $appt) {
-                $apptStart = Carbon::parse($appt->start_datetime);
-                $apptEnd = Carbon::parse($appt->end_datetime);
-                
-                // Check for overlap: new appointment overlaps with existing one
-                if ($start->lt($apptEnd) && $appointmentEnd->gt($apptStart)) {
-                    $isAvailable = false;
-                    break;
+            // Get service duration if service_id is provided
+            $serviceDuration = 60; // Default 60 minutes
+            if ($serviceId) {
+                $service = Service::find($serviceId);
+                if ($service) {
+                    $serviceDuration = max($service->duration_minutes, 30); // Minimum 30 minutes
                 }
             }
             
-            if ($isAvailable) {
-                $timeSlots[] = [
-                    'time' => $start->format('H:i:s'),
-                    'formatted_time' => $start->format('g:i A')
-                ];
+            // Get existing appointments for the selected staff and date
+            $appointments = Appointment::where('staff_id', $staffId)
+                ->whereDate('start_datetime', $selectedDate)
+                ->whereNotIn('status', ['cancelled', 'no_show'])
+                ->get(['start_datetime', 'end_datetime']);
+            
+            // Generate time slots based on service duration
+            $start = Carbon::parse($selectedDate . ' ' . $openingTime);
+            $end = Carbon::parse($selectedDate . ' ' . $closingTime);
+            $now = Carbon::now();
+            $isToday = Carbon::parse($selectedDate)->isToday();
+            
+            $timeSlots = [];
+            
+            while ($start->lt($end)) {
+                // Skip past times if the selected date is today
+                if ($isToday && $start->lt($now)) {
+                    $start->addMinutes($interval);
+                    continue;
+                }
+                
+                // Calculate when the appointment would end
+                $appointmentEnd = $start->copy()->addMinutes($serviceDuration);
+                
+                // Skip if appointment would end after closing time
+                if ($appointmentEnd->gt($end)) {
+                    $start->addMinutes($interval);
+                    continue;
+                }
+                
+                $isAvailable = true;
+                
+                // Check if the time slot conflicts with existing appointments
+                foreach ($appointments as $appt) {
+                    $apptStart = Carbon::parse($appt->start_datetime);
+                    $apptEnd = Carbon::parse($appt->end_datetime);
+                    
+                    // Check for overlap: new appointment overlaps with existing one
+                    if ($start->lt($apptEnd) && $appointmentEnd->gt($apptStart)) {
+                        $isAvailable = false;
+                        break;
+                    }
+                }
+                
+                if ($isAvailable) {
+                    $timeSlots[] = [
+                        'time' => $start->format('H:i:s'),
+                        'formatted_time' => $start->format('g:i A')
+                    ];
+                }
+                
+                $start->addMinutes($interval);
             }
             
-            $start->addMinutes($interval);
+            return response()->json([
+                'available_times' => $timeSlots
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in checkAvailability: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            
+            return response()->json([
+                'error' => 'Server error',
+                'message' => 'An error occurred while checking availability. Please try again.'
+            ], 500);
         }
-        
-        return response()->json([
-            'available_times' => $timeSlots
-        ]);
     }
 
     public function updateStatus(Request $request, Appointment $appointment)
@@ -500,9 +599,11 @@ class AppointmentController extends Controller
 
         $currentDateTime = now();
         $appointmentDate = $appointment->start_datetime;
+        $oldStatus = $appointment->status;
+        $newStatus = $request->status;
 
         // Prevent marking as completed before appointment date
-        if ($request->status === 'completed' && $currentDateTime->lt($appointmentDate)) {
+        if ($newStatus === 'completed' && $currentDateTime->lt($appointmentDate)) {
             $formattedDate = $appointmentDate->format('M j, Y g:i A');
             return back()->withErrors([
                 'status' => "Cannot mark as completed before the appointment date ($formattedDate)."
@@ -510,16 +611,38 @@ class AppointmentController extends Controller
         }
 
         // Prevent marking as in_progress before appointment date
-        if ($request->status === 'in_progress' && $currentDateTime->lt($appointmentDate)) {
+        if ($newStatus === 'in_progress' && $currentDateTime->lt($appointmentDate)) {
             $formattedDate = $appointmentDate->format('M j, Y g:i A');
             return back()->withErrors([
                 'status' => "Cannot start appointment before the scheduled date ($formattedDate)."
             ]);
         }
 
-        $appointment->update(['status' => $request->status]);
+        // Update the appointment status
+        $appointment->update(['status' => $newStatus]);
 
-        return back()->with('success', 'Appointment status updated successfully!');
+        // Notify customer if status changed and customer has a user account
+        if ($oldStatus !== $newStatus && $appointment->customer && $appointment->customer->user) {
+            $customerUser = $appointment->customer->user;
+            
+            // Create notification message based on status
+            $statusMessages = [
+                'scheduled' => 'Your appointment has been scheduled.',
+                'confirmed' => 'Your appointment has been confirmed.',
+                'in_progress' => 'Your appointment has started.',
+                'completed' => 'Your appointment has been completed. Thank you!',
+                'cancelled' => 'Your appointment has been cancelled.',
+                'no_show' => 'You were marked as a no-show for your appointment.',
+                'failed' => 'Your appointment was marked as failed.',
+            ];
+            
+            $message = $statusMessages[$newStatus] ?? 'Your appointment status has been updated.';
+            
+            // Send notification using the AppointmentStatusUpdated notification class
+            $customerUser->notify(new AppointmentStatusUpdated($appointment, $newStatus, $message));
+        }
+
+        return back()->with('success', 'Appointment status updated successfully! The customer has been notified.');
     }
     // Add these methods to AppointmentController.php
     public function showCancelForm(Appointment $appointment)
@@ -529,22 +652,37 @@ class AppointmentController extends Controller
 
     public function cancel(Request $request, Appointment $appointment)
     {
-        $request->validate([
-            'cancellation_reason' => 'required|string|max:500',
-            'status' => 'required|in:cancelled,failed',
-            'refund_amount' => 'nullable|numeric|min:0',
-            'refund_method' => 'nullable|in:cash,gcash,bank_transfer'
-        ]);
-
-        // Use the helper method from the model
-        if ($request->status === 'cancelled') {
-            $appointment->cancel($request->cancellation_reason, auth()->user());
+        // For customer cancellations, make reason optional and default status to cancelled
+        if (request()->routeIs('customer.*')) {
+            $request->validate([
+                'cancellation_reason' => 'nullable|string|max:500',
+                'status' => 'nullable|in:cancelled,failed'
+            ]);
+            
+            $cancellationReason = $request->cancellation_reason ?? 'Cancelled by customer';
+            $status = $request->status ?? 'cancelled';
         } else {
-            $appointment->markAsFailed($request->cancellation_reason);
+            // For admin/staff cancellations, require reason
+            $request->validate([
+                'cancellation_reason' => 'required|string|max:500',
+                'status' => 'required|in:cancelled,failed',
+                'refund_amount' => 'nullable|numeric|min:0',
+                'refund_method' => 'nullable|in:cash,gcash,bank_transfer'
+            ]);
+            
+            $cancellationReason = $request->cancellation_reason;
+            $status = $request->status;
         }
 
-        // Handle refund if applicable
-        if ($request->refund_amount > 0 && $appointment->payment) {
+        // Use the helper method from the model
+        if ($status === 'cancelled') {
+            $appointment->cancel($cancellationReason, auth()->user());
+        } else {
+            $appointment->markAsFailed($cancellationReason);
+        }
+
+        // Handle refund if applicable (only for admin/staff)
+        if (!$request->routeIs('customer.*') && $request->refund_amount > 0 && $appointment->payment) {
             // Create refund record
             Payment::create([
                 'appointment_id' => $appointment->id,
@@ -552,13 +690,19 @@ class AppointmentController extends Controller
                 'amount' => -$request->refund_amount,
                 'method' => $request->refund_method,
                 'status' => 'refunded',
-                'notes' => "Refund for {$request->status} appointment: " . $request->cancellation_reason,
+                'notes' => "Refund for {$status} appointment: " . $cancellationReason,
                 'paid_at' => now()
             ]);
         }
 
+        // Redirect based on route
+        if (request()->routeIs('customer.*')) {
+            return redirect()->route('customer.appointments.index')
+                ->with('success', 'Appointment has been cancelled successfully.');
+        }
+
         return redirect()->route('dashboard.appointments.index')
-            ->with('success', "Appointment has been {$request->status} successfully.");
+            ->with('success', "Appointment has been {$status} successfully.");
     }
 
 }

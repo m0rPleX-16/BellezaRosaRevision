@@ -103,6 +103,18 @@
                 data-href="{{ route('dashboard.payments.index') }}">
                 <i class="fas fa-money-bill-wave mr-3"></i> Payments
             </div>
+            @if (auth()->user()->isAdmin())
+                <div class="nav-item {{ request()->is('dashboard/commissions*') ? 'active' : '' }}"
+                    data-href="{{ route('dashboard.commissions.index') }}">
+                    <i class="fas fa-hand-holding-usd mr-3"></i> Commissions
+                </div>
+            @endif
+            @if (auth()->user()->isStaff())
+                <div class="nav-item {{ request()->is('staff/commission*') ? 'active' : '' }}"
+                    data-href="{{ route('staff.commission') }}">
+                    <i class="fas fa-hand-holding-usd mr-3"></i> My Commissions
+                </div>
+            @endif
             <div class="nav-item {{ request()->is('dashboard/services*') ? 'active' : '' }}"
                 data-href="{{ route('dashboard.services.index') }}">
                 <i class="fas fa-spa mr-3"></i> Services

@@ -17,6 +17,7 @@
             <form action="{{ route('dashboard.payments.store') }}" method="POST">
                 @csrf
                 <input type="hidden" name="appointment_id" value="{{ $appointment->id }}">
+                <input type="hidden" name="status" value="paid">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Appointment Info -->
