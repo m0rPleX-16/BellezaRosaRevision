@@ -13,7 +13,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="mt-6 space-y-6">
+    <form method="post" action="{{ request()->routeIs('customer.*') ? route('customer.profile.update') : route('profile.update') }}" enctype="multipart/form-data" class="mt-6 space-y-6">
         @csrf
         @method('patch')
 
@@ -92,21 +92,81 @@
             <x-input-error class="mt-2" :messages="$errors->get('phone')" />
         </div>
 
+        <!-- Gender -->
+        <div>
+            <x-input-label for="gender" :value="__('Gender')" />
+            <select id="gender" name="gender" class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">
+                <option value="">{{ __('Select Gender') }}</option>
+                <option value="male" {{ old('gender', $user->gender) == 'male' ? 'selected' : '' }}>{{ __('Male') }}</option>
+                <option value="female" {{ old('gender', $user->gender) == 'female' ? 'selected' : '' }}>{{ __('Female') }}</option>
+                <option value="other" {{ old('gender', $user->gender) == 'other' ? 'selected' : '' }}>{{ __('Other') }}</option>
+            </select>
+            <x-input-error class="mt-2" :messages="$errors->get('gender')" />
+        </div>
+
+        <!-- Customer Specific Fields -->
+        @if($user->isCustomer() && $user->customer)
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                    {{ __('Additional Information') }}
+                </h3>
+                
+                <div class="space-y-4">
+                    <!-- Birth Date -->
+                    <div>
+                        <x-input-label for="birth_date" :value="__('Birth Date')" />
+                        <x-text-input id="birth_date" name="birth_date" type="date" class="mt-1 block w-full" 
+                            :value="old('birth_date', $user->customer->birth_date ? $user->customer->birth_date->format('Y-m-d') : '')" 
+                            max="{{ now()->format('Y-m-d') }}" />
+                        <x-input-error class="mt-2" :messages="$errors->get('birth_date')" />
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <x-input-label for="notes" :value="__('Notes')" />
+                        <textarea id="notes" name="notes" rows="3" 
+                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm">{{ old('notes', $user->customer->notes) }}</textarea>
+                        <x-input-error class="mt-2" :messages="$errors->get('notes')" />
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Optional notes about your preferences.') }}</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Staff Specific Fields -->
         @if($user->isStaff() && $user->staff)
-            <div class="border-t border-gray-200 pt-4 mt-4">
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
                     {{ __('Staff Information') }}
                 </h3>
                 
                 <div class="space-y-4">
+                    <!-- Specialty (Read-only) -->
                     <div>
                         <x-input-label for="specialty" :value="__('Specialty')" />
                         <x-text-input id="specialty" name="specialty" type="text" class="mt-1 block w-full" 
-                            :value="old('specialty', $user->staff->specialty)" disabled />
-                        <p class="mt-1 text-sm text-gray-500">
+                            :value="old('specialty', $user->staff->formatted_specialty)" disabled />
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                             {{ __('Contact an administrator to change your specialty.') }}
                         </p>
+                    </div>
+
+                    <!-- Color Code -->
+                    <div>
+                        <x-input-label for="color_code" :value="__('Color Code')" />
+                        <div class="mt-1 flex items-center space-x-3">
+                            <input type="color" id="color_code_picker"
+                                value="{{ old('color_code', $user->staff->color_code ?? '#3B82F6') }}"
+                                onchange="document.getElementById('color_code').value = this.value"
+                                class="h-10 w-20 border border-gray-300 dark:border-gray-700 rounded-md cursor-pointer">
+                            <x-text-input type="text" id="color_code" name="color_code"
+                                value="{{ old('color_code', $user->staff->color_code ?? '#3B82F6') }}"
+                                oninput="document.getElementById('color_code_picker').value = this.value"
+                                pattern="^#[0-9A-Fa-f]{6}$"
+                                class="block w-full" placeholder="#3B82F6" />
+                        </div>
+                        <x-input-error class="mt-2" :messages="$errors->get('color_code')" />
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ __('Color used to identify you in the calendar.') }}</p>
                     </div>
                 </div>
             </div>

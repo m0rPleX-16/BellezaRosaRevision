@@ -134,7 +134,15 @@
                     data-href="{{ route('dashboard.reports.index') }}">
                     <i class="fas fa-chart-bar mr-3"></i> Reports
                 </div>
+                <div class="nav-item {{ request()->is('dashboard/settings*') ? 'active' : '' }}"
+                    data-href="{{ route('dashboard.settings.index') }}">
+                    <i class="fas fa-cog mr-3"></i> Salon Settings
+                </div>
             @endif
+            <div class="nav-item {{ request()->is('profile*') ? 'active' : '' }}"
+                data-href="{{ route('profile.edit') }}">
+                <i class="fas fa-user-circle mr-3"></i> Profile
+            </div>
             <div class="nav-item mt-auto cursor-pointer" onclick="confirmLogout()">
                 <i class="fas fa-sign-out-alt mr-3"></i> Logout
             </div>

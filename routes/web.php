@@ -13,6 +13,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
@@ -65,9 +66,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/check-availability', [AppointmentController::class, 'checkAvailability'])->name('checkAvailability');
         });
 
-        Route::get('/customer/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-        Route::patch('/customer/profile', [ProfileController::class, 'update'])->name('profile.update');
-        Route::delete('/customer/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });
 
     // Profile routes
@@ -163,6 +164,12 @@ Route::middleware(['auth'])->group(function () {
             // Parameterized routes come last
             Route::get('/{commission}', [CommissionController::class, 'show'])->name('show');
             Route::post('/{commission}/pay', [CommissionController::class, 'paySingle'])->name('pay');
+        });
+
+        // Salon Settings (Admin only)
+        Route::middleware(['role:admin'])->prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', [SettingsController::class, 'index'])->name('index');
+            Route::post('/', [SettingsController::class, 'update'])->name('update');
         });
 
         // Inventory

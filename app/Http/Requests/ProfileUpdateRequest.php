@@ -16,8 +16,9 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         $userId = $this->user() ? $this->user()->id : null;
+        $user = $this->user();
         
-        return [
+        $rules = [
             'full_name' => ['required', 'string', 'max:255'],
             'username' => [
                 'required',
@@ -39,7 +40,20 @@ class ProfileUpdateRequest extends FormRequest
                 'max:20',
                 'regex:/^[0-9\-\+\(\)\s]+$/',
             ],
-            'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+            'gender' => ['nullable', 'in:male,female,other'],
         ];
+        
+        // Customer-specific fields
+        if ($user && $user->isCustomer()) {
+            $rules['birth_date'] = ['nullable', 'date', 'before:today'];
+            $rules['notes'] = ['nullable', 'string', 'max:1000'];
+        }
+        
+        // Staff-specific fields
+        if ($user && $user->isStaff()) {
+            $rules['color_code'] = ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+        }
+        
+        return $rules;
     }
 }
