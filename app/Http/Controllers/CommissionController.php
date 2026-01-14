@@ -163,6 +163,15 @@ class CommissionController extends Controller
     }
 
     /**
+     * Show commission report form
+     */
+    public function showReportForm()
+    {
+        $staff = Staff::with('user')->get();
+        return view('dashboard.commissions.report-form', compact('staff'));
+    }
+
+    /**
      * Generate commission report
      */
     public function generateReport(Request $request)

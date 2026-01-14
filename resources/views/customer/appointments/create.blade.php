@@ -1,51 +1,55 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 py-8 max-w-4xl">
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-[var(--gold-light)] py-4">
     <!-- Back Navigation -->
-    <div class="mb-6">
+    <div class="max-w-6xl mx-auto px-4 mb-4">
         <a href="{{ route('customer.appointments.index') }}" 
-           class="inline-flex items-center text-gray-600 hover:text-pink-600 transition-colors">
+           class="inline-flex items-center text-gray-600 hover:text-pink-600 transition-colors text-sm">
             <i class="fas fa-arrow-left mr-2"></i>
             Back to Appointments
         </a>
     </div>
 
-    <!-- Page Header -->
-    <div class="text-center mb-8">
-        <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <i class="fas fa-calendar-plus text-white text-2xl"></i>
-        </div>
-        <h1 class="text-2xl font-bold text-gray-900">Book Your Appointment</h1>
-        <p class="text-gray-500 mt-2">Select your preferred service, staff, date and time</p>
-    </div>
-
-    <!-- Booking Form Card -->
-    <div class="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
-        <form action="{{ route('customer.appointments.store') }}" method="POST" id="appointmentForm">
+    <!-- Compact Booking Form -->
+    <div class="max-w-6xl mx-auto px-4">
+        <form action="{{ route('customer.appointments.store') }}" method="POST" id="appointmentForm" class="bg-white rounded-2xl shadow-xl border border-gray-100">
             @csrf
             <input type="hidden" name="customer_id" value="{{ auth()->user()->customer->id }}">
+            
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dark)] rounded-xl flex items-center justify-center mr-3">
+                            <i class="fas fa-calendar-plus text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">Book Appointment</h1>
+                            <p class="text-sm text-gray-600">Select service, staff, date and time</p>
+                        </div>
+                    </div>
+                    <div id="price-display" class="text-right">
+                        <p class="text-sm text-gray-500">Total</p>
+                        <p id="price-summary" class="text-2xl font-bold text-[var(--gold)]">₱0.00</p>
+                    </div>
+                </div>
+            </div>
 
-            <div class="p-8">
+            <!-- Main Content -->
+            <div class="p-6">
                 @if (isset($prefilledService) && isset($prefilledStaff))
-                    <!-- Pre-filled Service & Staff Display -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <!-- Service Card -->
-                        <div class="p-5 bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl border border-pink-100">
-                            <div class="flex items-center mb-3">
-                                <div class="w-10 h-10 bg-pink-500 rounded-xl flex items-center justify-center mr-3">
-                                    <i class="fas fa-spa text-white"></i>
-                                </div>
-                                <span class="text-sm font-medium text-pink-600 uppercase tracking-wide">Selected Service</span>
+                    <!-- Pre-filled Selections (Compact) -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-[var(--primary)] uppercase">Service</span>
+                                <i class="fas fa-spa text-[var(--primary)]"></i>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">{{ $prefilledService->name }}</h3>
+                            <h3 class="font-semibold text-gray-900 text-sm">{{ $prefilledService->name }}</h3>
                             <div class="flex items-center justify-between mt-2">
-                                <span class="text-sm text-gray-500">
-                                    <i class="fas fa-clock mr-1"></i>{{ $prefilledService->duration_minutes }} minutes
-                                </span>
-                                <span class="text-lg font-bold text-pink-600">
-                                    ₱{{ number_format($prefilledService->price_premium ?? $prefilledService->price_regular, 2) }}
-                                </span>
+                                <span class="text-xs text-gray-500">{{ $prefilledService->duration_minutes }} min</span>
+                                <span class="text-sm font-bold text-[var(--gold)]">₱{{ number_format($prefilledService->price_premium ?? $prefilledService->price_regular, 2) }}</span>
                             </div>
                             <input type="hidden" name="service_id" id="service_id" value="{{ $prefilledService->id }}">
                             <input type="hidden" id="service_duration" value="{{ $prefilledService->duration_minutes }}">
@@ -54,177 +58,162 @@
                             <input type="hidden" id="service_name" value="{{ $prefilledService->name }}">
                         </div>
 
-                        <!-- Staff Card -->
-                        <div class="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-                            <div class="flex items-center mb-3">
-                                <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center mr-3">
-                                    <i class="fas fa-user text-white"></i>
-                                </div>
-                                <span class="text-sm font-medium text-blue-600 uppercase tracking-wide">Selected Staff</span>
+                        <div class="p-4 bg-gradient-to-br from-[var(--gold-light)] to-[var(--gold)] rounded-xl border border-[var(--gold-dark)]">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-[var(--gold-dark)] uppercase">Staff</span>
+                                <i class="fas fa-user text-[var(--gold)]"></i>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">{{ $prefilledStaff->user->full_name }}</h3>
+                            <h3 class="font-semibold text-gray-900 text-sm">{{ $prefilledStaff->user->full_name }}</h3>
                             @if($prefilledStaff->user->gender)
-                                <p class="text-sm text-gray-500 mt-1">{{ $prefilledStaff->user->formatted_gender }}</p>
+                                <p class="text-xs text-gray-500 mt-1">{{ $prefilledStaff->user->formatted_gender }}</p>
                             @endif
                             <input type="hidden" name="staff_id" id="staff_id" value="{{ $prefilledStaff->id }}">
                             <input type="hidden" id="staff_name" value="{{ $prefilledStaff->user->full_name }}">
                         </div>
                     </div>
                 @else
-                    <!-- Service Selection -->
-                    <div class="mb-6">
-                        <label for="service_id" class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-spa text-pink-500 mr-2"></i>Select Service <span class="text-red-500">*</span>
-                        </label>
-                        <select name="service_id" id="service_id" required
-                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
-                            <option value="">Choose a service...</option>
-                            @foreach ($services as $service)
-                                <option value="{{ $service->id }}"
-                                    data-duration="{{ $service->duration_minutes }}"
-                                    data-price="{{ $service->price_regular }}"
-                                    data-price-premium="{{ $service->price_premium ?? $service->price_regular }}">
-                                    {{ $service->name }} ({{ $service->duration_minutes }} min) - ₱{{ number_format($service->price_premium ?? $service->price_regular, 2) }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('service_id')
-                            <p class="mt-2 text-sm text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <!-- Service & Staff Selection (Side by side) -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label for="service_id" class="block text-xs font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-spa text-[var(--primary)] mr-1"></i>Service <span class="text-red-500">*</span>
+                            </label>
+                            <select name="service_id" id="service_id" required
+                                class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
+                                <option value="">Choose service...</option>
+                                @foreach ($services as $service)
+                                    <option value="{{ $service->id }}"
+                                        data-duration="{{ $service->duration_minutes }}"
+                                        data-price="{{ $service->price_regular }}"
+                                        data-price-premium="{{ $service->price_premium ?? $service->price_regular }}">
+                                        {{ $service->name }} ({{ $service->duration_minutes }} min)
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('service_id')
+                                <p class="mt-1 text-xs text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                            @enderror
+                        </div>
 
-                    <!-- Staff Selection -->
-                    <div class="mb-6">
-                        <label for="staff_id" class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-user text-blue-500 mr-2"></i>Select Staff Member <span class="text-red-500">*</span>
-                        </label>
-                        <select name="staff_id" id="staff_id" required
-                            class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
-                            <option value="">Choose a staff member...</option>
-                            @foreach ($staff as $staffMember)
-                                <option value="{{ $staffMember->id }}">
-                                    {{ $staffMember->user->full_name }}
-                                    @if($staffMember->user->gender)
-                                        ({{ $staffMember->user->formatted_gender }})
-                                    @endif
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('staff_id')
-                            <p class="mt-2 text-sm text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
-                        @enderror
+                        <div>
+                            <label for="staff_id" class="block text-xs font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-user text-[var(--gold)] mr-1"></i>Staff <span class="text-red-500">*</span>
+                            </label>
+                            <select name="staff_id" id="staff_id" required
+                                class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
+                                <option value="">Choose staff...</option>
+                                @foreach ($staff as $staffMember)
+                                    <option value="{{ $staffMember->id }}">
+                                        {{ $staffMember->user->full_name }}
+                                        @if($staffMember->user->gender)
+                                            ({{ $staffMember->user->formatted_gender }})
+                                        @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('staff_id')
+                                <p class="mt-1 text-xs text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
                 @endif
 
-                <!-- Date Selection -->
-                <div class="mb-6">
-                    <label for="appointment_date" class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-calendar text-green-500 mr-2"></i>Select Date <span class="text-red-500">*</span>
-                    </label>
-                    <input type="date" 
-                           name="appointment_date" 
-                           id="appointment_date"
-                           min="{{ now()->format('Y-m-d') }}"
-                           required
-                           class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
-                    @error('appointment_date')
-                        <p class="mt-2 text-sm text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
-                    @enderror
-                    @error('start_datetime')
-                        <p class="mt-2 text-sm text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
-                    @enderror
+                <!-- Date & Time Section (Compact) -->
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <!-- Date Selection -->
+                    <div>
+                        <label for="appointment_date" class="block text-xs font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-calendar text-green-500 mr-1"></i>Date <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" 
+                               name="appointment_date" 
+                               id="appointment_date"
+                               min="{{ now()->format('Y-m-d') }}"
+                               required
+                               class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all">
+                        @error('appointment_date')
+                            <p class="mt-1 text-xs text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Selected Time Display -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-clock text-blue-500 mr-1"></i>Time <span class="text-red-500">*</span>
+                        </label>
+                        <div id="selected-time-display" class="hidden">
+                            <div class="px-3 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-800">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                <span id="selected-time-text">--</span>
+                            </div>
+                        </div>
+                        <div id="no-time-selected" class="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500">
+                            Select date first
+                        </div>
+                    </div>
+
+                    <!-- Duration Display -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-hourglass-half text-orange-500 mr-1"></i>Duration
+                        </label>
+                        <div class="px-3 py-2.5 bg-orange-50 border border-orange-200 rounded-lg text-sm font-medium text-orange-800">
+                            <span id="duration-display">-- min</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Schedule Info -->
-                <div id="schedule-info" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl hidden">
+                <div id="schedule-info" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg hidden">
                     <div class="flex items-center text-blue-700">
-                        <i class="fas fa-info-circle mr-2"></i>
+                        <i class="fas fa-info-circle mr-2 text-sm"></i>
                         <span id="schedule-message" class="text-sm"></span>
                     </div>
                 </div>
 
-                <!-- Available Time Slots -->
+                <!-- Available Time Slots (Compact) -->
                 <div id="available-times-container" class="mb-6 hidden">
-                    <label class="block text-sm font-semibold text-gray-700 mb-3">
-                        <i class="fas fa-clock text-purple-500 mr-2"></i>Available Time Slots <span class="text-red-500">*</span>
+                    <label class="block text-xs font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-clock text-blue-500 mr-1"></i>Available Time Slots
                     </label>
-                    <div id="available-times-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                    <div id="available-times-grid" class="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
                         <!-- Time slots dynamically inserted here -->
                     </div>
-                    <p id="no-times-message" class="mt-3 text-sm text-red-600 hidden">
+                    <p id="no-times-message" class="mt-2 text-xs text-red-600 hidden">
                         <i class="fas fa-exclamation-circle mr-1"></i>
                         No available time slots for this date.
                     </p>
-                </div>
-
-                <!-- Selected Time Display -->
-                <div id="selected-time-display" class="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl hidden">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center text-green-700">
-                            <i class="fas fa-check-circle mr-2"></i>
-                            <span class="font-medium">Selected Time:</span>
-                        </div>
-                        <span id="selected-time-text" class="text-lg font-bold text-green-800">--</span>
-                    </div>
                 </div>
 
                 <!-- Hidden time fields -->
                 <input type="hidden" name="appointment_time" id="appointment_time" value="">
                 <input type="hidden" name="start_datetime" id="start_datetime" value="">
 
-                <!-- Notes -->
+                <!-- Notes (Compact) -->
                 <div class="mb-6">
-                    <label for="notes" class="block text-sm font-semibold text-gray-700 mb-2">
-                        <i class="fas fa-sticky-note text-yellow-500 mr-2"></i>Special Requests or Notes
+                    <label for="notes" class="block text-xs font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-sticky-note text-[var(--gold)] mr-1"></i>Special Requests (Optional)
                     </label>
-                    <textarea name="notes" id="notes" rows="3"
-                        placeholder="Any special requests, allergies, or notes for your appointment..."
-                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all resize-none"></textarea>
+                    <textarea name="notes" id="notes" rows="2"
+                        placeholder="Any special requests or notes..."
+                        class="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 focus:border-pink-300 focus:ring focus:ring-pink-200 focus:ring-opacity-50 transition-all resize-none"></textarea>
                 </div>
 
-                <!-- Booking Summary -->
-                <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 mb-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                        <i class="fas fa-receipt text-pink-500 mr-2"></i>
-                        Booking Summary
-                    </h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600">Service</span>
-                            <span id="service-summary" class="font-medium text-gray-900">--</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600">Duration</span>
-                            <span id="duration-summary" class="font-medium text-gray-900">--</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600">Staff</span>
-                            <span id="staff-summary" class="font-medium text-gray-900">--</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-600">Date</span>
-                            <span id="date-summary" class="font-medium text-gray-900">--</span>
-                        </div>
-                        <hr class="border-gray-200">
-                        <div class="flex justify-between items-center pt-2">
-                            <span class="text-lg font-semibold text-gray-900">Total Amount</span>
-                            <span id="price-summary" class="text-2xl font-bold text-pink-600">₱0.00</span>
-                        </div>
-                    </div>
-                </div>
             </div>
 
-            <!-- Form Actions -->
-            <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row justify-end gap-3">
-                <a href="{{ route('customer.appointments.index') }}"
-                   class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-100 transition-colors">
-                    Cancel
-                </a>
-                <button type="submit" id="submitBtn"
-                    class="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
-                    <i class="fas fa-calendar-check mr-2"></i>
-                    Book Appointment
-                </button>
+            <!-- Form Actions (Sticky Footer) -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+                <div class="flex justify-end gap-3">
+                    <a href="{{ route('customer.appointments.index') }}"
+                       class="inline-flex items-center justify-center px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors text-sm">
+                        Cancel
+                    </a>
+                    <button type="submit" id="submitBtn"
+                        class="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 text-sm">
+                        <i class="fas fa-calendar-check mr-2"></i>
+                        Book Appointment
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -356,20 +345,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     data.available_times.forEach((timeSlot) => {
                         const timeButton = document.createElement('button');
                         timeButton.type = 'button';
-                        timeButton.className = 'time-slot-btn px-3 py-2.5 text-sm font-medium rounded-xl border-2 border-gray-200 bg-white text-gray-700 hover:bg-pink-50 hover:border-pink-300 hover:text-pink-600 focus:outline-none transition-all';
+                        timeButton.className = 'time-slot-btn px-2 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-blue-50 hover:border-[var(--primary)] hover:text-[var(--primary)] focus:outline-none transition-all';
                         timeButton.textContent = timeSlot.formatted_time;
                         timeButton.dataset.time = timeSlot.time;
                         
                         timeButton.addEventListener('click', function() {
                             // Remove active from all
                             availableTimesGrid.querySelectorAll('.time-slot-btn').forEach(btn => {
-                                btn.classList.remove('bg-pink-500', 'border-pink-500', 'text-white');
+                                btn.classList.remove('bg-[var(--primary)]', 'border-[var(--primary)]', 'text-white');
                                 btn.classList.add('bg-white', 'border-gray-200', 'text-gray-700');
                             });
                             
                             // Activate clicked
                             this.classList.remove('bg-white', 'border-gray-200', 'text-gray-700');
-                            this.classList.add('bg-pink-500', 'border-pink-500', 'text-white');
+                            this.classList.add('bg-[var(--primary)]', 'border-[var(--primary)]', 'text-white');
                             
                             // Set values
                             timeInput.value = timeSlot.time;
@@ -379,6 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (timeDisplay) {
                                 document.getElementById('selected-time-text').textContent = timeSlot.formatted_time;
                                 timeDisplay.classList.remove('hidden');
+                                document.getElementById('no-time-selected').classList.add('hidden');
                             }
                             
                             updateSummary();
@@ -395,12 +385,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     const firstButton = availableTimesGrid.querySelector('.time-slot-btn');
                     if (firstButton) {
                         firstButton.classList.remove('bg-white', 'border-gray-200', 'text-gray-700');
-                        firstButton.classList.add('bg-pink-500', 'border-pink-500', 'text-white');
+                        firstButton.classList.add('bg-[var(--primary)]', 'border-[var(--primary)]', 'text-white');
                     }
                     
                     if (timeDisplay) {
                         document.getElementById('selected-time-text').textContent = firstTime.formatted_time;
                         timeDisplay.classList.remove('hidden');
+                        document.getElementById('no-time-selected').classList.add('hidden');
                     }
                 }
             } else {
@@ -445,6 +436,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('selected-time-display')?.classList.add('hidden');
         document.getElementById('no-times-message')?.classList.add('hidden');
         document.getElementById('schedule-info')?.classList.add('hidden');
+        document.getElementById('no-time-selected')?.classList.remove('hidden');
         resetTimeInputs();
         updateSummary();
     }
@@ -466,27 +458,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateSummary() {
         if (isPrefilled) {
-            document.getElementById('service-summary').textContent = serviceName;
-            document.getElementById('duration-summary').textContent = serviceDuration ? `${serviceDuration} minutes` : '--';
-            document.getElementById('staff-summary').textContent = staffName;
-            document.getElementById('price-summary').textContent = `₱${parseFloat(servicePricePremium || servicePrice || 0).toFixed(2)}`;
+            // Update price display in header
+            const price = parseFloat(servicePricePremium || servicePrice || 0);
+            document.getElementById('price-summary').textContent = `₱${price.toFixed(2)}`;
+            
+            // Update duration display
+            const durationDisplay = document.getElementById('duration-display');
+            if (durationDisplay && serviceDuration) {
+                durationDisplay.textContent = `${serviceDuration} min`;
+            }
         } else {
             const selectedService = serviceSelect?.options[serviceSelect.selectedIndex];
-            document.getElementById('service-summary').textContent = selectedService?.text?.split(' (')[0] || '--';
-            document.getElementById('duration-summary').textContent = selectedService?.dataset?.duration ? `${selectedService.dataset.duration} minutes` : '--';
             
-            const selectedStaff = staffSelect?.options[staffSelect.selectedIndex];
-            document.getElementById('staff-summary').textContent = selectedStaff?.text || '--';
-            
+            // Update price display in header
             const price = selectedService?.dataset?.pricePremium || selectedService?.dataset?.price || '0';
             document.getElementById('price-summary').textContent = `₱${parseFloat(price).toFixed(2)}`;
+            
+            // Update duration display
+            const durationDisplay = document.getElementById('duration-display');
+            if (durationDisplay && selectedService?.dataset?.duration) {
+                durationDisplay.textContent = `${selectedService.dataset.duration} min`;
+            }
         }
-
-        // Update date
-        const date = dateInput?.value;
-        document.getElementById('date-summary').textContent = date 
-            ? new Date(date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
-            : '--';
     }
 
     // Initial update

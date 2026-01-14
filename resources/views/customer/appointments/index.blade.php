@@ -15,7 +15,7 @@
                     <p class="text-gray-500 mt-1">Manage and track your spa appointments</p>
                 </div>
                 <a href="{{ route('customer.staff') }}" 
-                   class="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
+                   class="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
                     <i class="fas fa-plus mr-2"></i>
                     Book New Appointment
                 </a>
@@ -32,7 +32,7 @@
                             <i class="fas fa-clock mr-2"></i>
                             Upcoming
                             @if($upcomingAppointments->count() > 0)
-                                <span class="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-bold">
+                                <span class="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-[var(--primary)] rounded-full font-bold">
                                     {{ $upcomingAppointments->count() }}
                                 </span>
                             @endif
@@ -110,7 +110,7 @@
                                 <h3 class="text-lg font-semibold text-gray-700 mb-2">No Upcoming Appointments</h3>
                                 <p class="text-gray-500 mb-6 max-w-sm mx-auto">You don't have any appointments scheduled. Book a service to get started!</p>
                                 <a href="{{ route('customer.staff') }}" 
-                                   class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-medium">
+                                   class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white rounded-xl font-medium">
                                     <i class="fas fa-plus mr-2"></i>
                                     Book Now
                                 </a>

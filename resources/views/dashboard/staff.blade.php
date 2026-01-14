@@ -151,11 +151,6 @@
                                                     </button>
                                                 </form>
                                             @endif
-
-                                            <a href="{{ route('dashboard.appointments.show', $appointment) }}"
-                                                class="text-blue-600 hover:text-blue-800" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
                                         </div>
                                     </td>
                                 </tr>
@@ -179,11 +174,6 @@
                     <i class="fas fa-tasks text-green-500 mr-2"></i> Quick Actions
                 </h3>
                 <div class="space-y-4">
-                    <a href="{{ route('dashboard.appointments.index') }}"
-                        class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition transform hover:-translate-y-1 flex items-center justify-center">
-                        <i class="fas fa-list mr-2"></i> View All Appointments
-                    </a>
-
                     <button onclick="openServiceReportModal()"
                         class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition transform hover:-translate-y-1 flex items-center justify-center">
                         <i class="fas fa-file-alt mr-2"></i> Daily Service Report

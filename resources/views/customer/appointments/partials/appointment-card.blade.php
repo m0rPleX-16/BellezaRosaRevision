@@ -88,7 +88,7 @@
         <div class="flex flex-col lg:flex-row lg:items-center gap-4">
             <!-- Service Icon & Info -->
             <div class="flex items-start flex-1 min-w-0">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dark)] flex items-center justify-center flex-shrink-0 shadow-lg">
                     <i class="fas fa-spa text-white text-xl"></i>
                 </div>
                 
@@ -135,7 +135,7 @@
                 <div class="text-2xl font-bold text-gray-900">
                     {{ $appointmentDate->format('g:i A') }}
                 </div>
-                <div class="text-lg font-semibold text-pink-600 mt-1">
+                <div class="text-2xl font-bold text-[var(--gold)] mt-1">
                     ₱{{ number_format($appointment->total_amount ?? 0, 2) }}
                 </div>
             </div>
@@ -192,7 +192,7 @@
             @endif
             
             <a href="{{ route('customer.appointments.show', $appointment) }}" 
-               class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-600 text-sm font-medium rounded-xl text-white hover:shadow-lg transition-all">
+               class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-sm font-medium rounded-xl text-white hover:shadow-lg transition-all">
                 <i class="fas fa-eye mr-2"></i>
                 View Details
             </a>

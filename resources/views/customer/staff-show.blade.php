@@ -11,7 +11,7 @@
             <!-- Back Navigation -->
             <div class="mb-6">
                 <a href="{{ route('customer.staff') }}" 
-                   class="inline-flex items-center text-gray-600 hover:text-pink-600 transition-colors">
+                   class="inline-flex items-center text-gray-600 hover:text-[var(--primary)] transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Back to Staff List
                 </a>
@@ -73,7 +73,7 @@
                             <p class="text-gray-500 mt-1">Select a service to book your appointment</p>
                         </div>
                         <div class="hidden sm:flex items-center text-sm text-gray-500">
-                            <i class="fas fa-info-circle mr-2"></i>
+                            <i class="fas fa-info-circle mr-2 text-[var(--primary)]"></i>
                             Click to book
                         </div>
                     </div>
@@ -89,10 +89,10 @@
                                 'Full Service' => 'fa-star',
                             ];
                             $categoryColors = [
-                                'Hair Services' => ['from-purple-500', 'to-pink-500'],
-                                'Nail Services' => ['from-pink-500', 'to-rose-500'],
-                                'Spa Services' => ['from-blue-500', 'to-cyan-500'],
-                                'Full Service' => ['from-indigo-500', 'to-purple-500'],
+                                'Hair Services' => ['from-[var(--primary)]', 'to-[var(--primary-light)]'],
+                                'Nail Services' => ['from-[var(--gold)]', 'to-[var(--gold-light)]'],
+                                'Spa Services' => ['from-blue-400', 'to-cyan-400'],
+                                'Full Service' => ['from-indigo-500', 'to-[var(--primary)]'],
                             ];
                             $categoryCount = $services->count();
                             $hasMultipleCategories = $categoryCount > 1;
@@ -128,11 +128,11 @@
                             @foreach($services as $categoryName => $categoryServices)
                                 @php
                                     $categoryId = Str::slug($categoryName);
-                                    $colors = $categoryColors[$categoryName] ?? ['from-pink-500', 'to-rose-500'];
+                                    $colors = $categoryColors[$categoryName] ?? ['from-[var(--primary)]', 'to-[var(--primary-light)]'];
                                 @endphp
                                 @foreach($categoryServices as $service)
                                     <a href="{{ route('customer.appointments.create', ['service_id' => $service->id, 'staff_id' => $staff->id]) }}" 
-                                       class="service-card group block bg-white rounded-2xl border-2 border-gray-100 overflow-hidden hover:border-pink-300 hover:shadow-lg transition-all duration-300"
+                                       class="service-card group block bg-white rounded-2xl border-2 border-gray-100 overflow-hidden hover:border-[var(--primary)] hover:shadow-lg transition-all duration-300"
                                        data-category="{{ $categoryId }}">
                                         
                                         <!-- Service Header -->
@@ -141,7 +141,7 @@
                                         <div class="p-5">
                                             <!-- Service Name & Status -->
                                             <div class="flex items-start justify-between mb-3">
-                                                <h4 class="font-bold text-gray-900 group-hover:text-pink-600 transition-colors pr-2">
+                                                <h4 class="font-bold text-gray-900 group-hover:text-[var(--primary)] transition-colors pr-2">
                                                     {{ $service->name }}
                                                 </h4>
                                                 <span class="flex-shrink-0 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
@@ -176,7 +176,7 @@
                                             
                                             <!-- Book Button -->
                                             <div class="mt-4 pt-4 border-t border-gray-100">
-                                                <span class="flex items-center justify-center w-full px-4 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-medium group-hover:shadow-lg transition-all">
+                                                <span class="flex items-center justify-center w-full px-4 py-2.5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white rounded-xl font-medium group-hover:shadow-lg transition-all">
                                                     <i class="fas fa-calendar-plus mr-2"></i>
                                                     Book This Service
                                                 </span>
@@ -195,7 +195,7 @@
                             <h3 class="text-lg font-semibold text-gray-700 mb-2">No Services Available</h3>
                             <p class="text-gray-500 max-w-sm mx-auto">This staff member doesn't have any services assigned yet. Please check back later or choose a different staff member.</p>
                             <a href="{{ route('customer.staff') }}" 
-                               class="inline-flex items-center mt-6 px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl font-medium hover:shadow-lg transition-all">
+                               class="inline-flex items-center mt-6 px-5 py-2.5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white rounded-xl font-medium hover:shadow-lg transition-all">
                                 <i class="fas fa-arrow-left mr-2"></i>
                                 Browse Other Staff
                             </a>

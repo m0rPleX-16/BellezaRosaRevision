@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <title>@yield('title', config('app.name', 'Belleza Rosa Spa'))</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -12,6 +13,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
+        :root {
+            --primary: #1E40AF;
+            --primary-light: #3B82F6;
+            --primary-dark: #1E3A8A;
+            --gold: #F59E0B;
+            --gold-light: #FBBF24;
+            --gold-dark: #D97706;
+            --white: #FFFFFF;
+            --light: #F8FAFC;
+            --gray: #64748B;
+            --dark: #1E293B;
+        }
+
         body {
             font-family: 'Poppins', sans-serif;
         }
@@ -35,7 +49,7 @@
         
         /* Navigation active state */
         .nav-link.active {
-            color: #1E40AF !important;
+            color: var(--primary) !important;
             font-weight: 600;
         }
         
@@ -74,13 +88,15 @@
             <nav class="navbar" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0;">
                 <!-- Logo -->
                 <a href="{{ auth()->check() && auth()->user()->isCustomer() ? route('customer.dashboard') : '/' }}" 
-                   class="logo flex items-center space-x-2 group">
-                    <div class="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                        <i class="fas fa-spa text-white text-lg"></i>
+                   class="logo flex items-center space-x-3 group">
+                    <img src="{{ asset('images/logo.png') }}" alt="Belleza Rosa Logo"
+                        class="h-10 w-auto transition-transform group-hover:scale-105">
+                    <div class="flex flex-col">
+                        <span class="text-xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] bg-clip-text text-transparent leading-tight">
+                            Belleza Rosa
+                        </span>
+                        <span class="text-xs text-[var(--gold)] font-medium leading-none">Premium Salon</span>
                     </div>
-                    <span class="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
-                        Belleza Rosa
-                    </span>
                 </a>
 
                 <!-- Mobile Menu Button -->
@@ -94,19 +110,19 @@
                         @if (auth()->user()->isCustomer())
                             <li>
                                 <a href="{{ route('customer.dashboard') }}"
-                                    class="nav-link flex items-center px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('customer.dashboard') ? 'bg-pink-50 text-pink-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' }}">
+                                    class="nav-link flex items-center px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('customer.dashboard') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' }}">
                                     <i class="fas fa-home mr-2"></i> Dashboard
                                 </a>
                             </li>
                             <li>
                                 <a href="{{ route('customer.appointments.index') }}"
-                                    class="nav-link flex items-center px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('customer.appointments.*') ? 'bg-pink-50 text-pink-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' }}">
+                                    class="nav-link flex items-center px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('customer.appointments.*') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' }}">
                                     <i class="fas fa-calendar-alt mr-2"></i> Appointments
                                 </a>
                             </li>
                             <li>
                                 <a href="{{ route('customer.staff') }}"
-                                    class="nav-link flex items-center px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('customer.staff*') ? 'bg-pink-50 text-pink-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' }}">
+                                    class="nav-link flex items-center px-3 py-2 rounded-lg transition-colors {{ request()->routeIs('customer.staff*') ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' }}">
                                     <i class="fas fa-spa mr-2"></i> Book Now
                                 </a>
                             </li>
@@ -120,7 +136,7 @@
                         @if (auth()->user()->isAdmin() || auth()->user()->isStaff())
                             <li>
                                 <a href="{{ route('dashboard.index') }}" 
-                                   class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
+                                   class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
                                     <i class="fas fa-chart-line mr-2"></i> Dashboard
                                 </a>
                             </li>
@@ -145,14 +161,14 @@
                                 <div id="notificationDropdown" 
                                     class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl z-50 border border-gray-100 overflow-hidden"
                                     data-dropdown>
-                                    <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-pink-50 to-rose-50 flex justify-between items-center">
+                                    <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 flex justify-between items-center">
                                         <h3 class="font-bold text-gray-800">
-                                            <i class="fas fa-bell mr-2 text-pink-500"></i>Notifications
+                                            <i class="fas fa-bell mr-2 text-blue-500"></i>Notifications
                                         </h3>
                                         @if(auth()->user()->unreadNotifications->count() > 0)
                                             <form id="markAllReadForm" action="{{ route('notifications.mark-all-read') }}" method="POST" class="inline">
                                                 @csrf
-                                                <button type="submit" class="text-xs text-pink-600 hover:text-pink-800 font-medium">
+                                                <button type="submit" class="text-xs text-blue-600 hover:text-blue-800 font-medium">
                                                     Mark all as read
                                                 </button>
                                             </form>
@@ -162,7 +178,7 @@
                                         @include('partials.notifications.list', ['notifications' => auth()->user()->notifications->take(10)])
                                     </div>
                                     <div class="p-3 border-t border-gray-100 text-center bg-gray-50">
-                                        <a href="{{ route('notifications.index') }}" class="text-sm text-pink-600 hover:text-pink-800 font-medium">
+                                        <a href="{{ route('notifications.index') }}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
                                             View all notifications <i class="fas fa-arrow-right ml-1"></i>
                                         </a>
                                     </div>
@@ -175,7 +191,7 @@
                             <button type="button" 
                                 id="userMenuToggle"
                                 class="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-pink-300">
-                                <div class="w-8 h-8 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                                <div class="w-8 h-8 bg-gradient-to-br from-[var(--gold)] to-[var(--gold-light)] rounded-full flex items-center justify-center text-white font-semibold text-sm">
                                     {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                 </div>
                                 <span class="text-gray-700 font-medium hidden sm:block">{{ auth()->user()->first_name ?? auth()->user()->name }}</span>
@@ -212,7 +228,7 @@
                         <li><a href="/#contact" class="text-gray-600 hover:text-gray-900 transition-colors">Contact</a></li>
                         <li>
                             <a href="{{ route('login') }}" 
-                               class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
+                               class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white rounded-full font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 border border-blue-600/20">
                                 <i class="fas fa-sign-in-alt mr-2"></i> Login
                             </a>
                         </li>
@@ -246,7 +262,7 @@
                     </button>
                 </form>
             @else
-                <a href="{{ route('login') }}" class="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-lg font-semibold">
+                <a href="{{ route('login') }}" class="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
                     <i class="fas fa-sign-in-alt mr-2"></i> Login
                 </a>
             @endauth
@@ -298,11 +314,10 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                         <!-- Brand -->
                         <div class="col-span-1 md:col-span-2">
-                            <div class="flex items-center space-x-2 mb-4">
-                                <div class="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center shadow-lg">
-                                    <i class="fas fa-spa text-white text-lg"></i>
-                                </div>
-                                <span class="text-xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">
+                            <div class="flex items-center space-x-3 mb-4">
+                                <img src="{{ asset('images/logo.png') }}" alt="Belleza Rosa Logo"
+                                    class="h-10 w-auto transition-transform hover:scale-105">
+                                <span class="text-xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] bg-clip-text text-transparent">
                                     Belleza Rosa
                                 </span>
                             </div>
@@ -315,10 +330,10 @@
                         <div>
                             <h4 class="font-semibold text-gray-900 mb-4">Quick Links</h4>
                             <ul class="space-y-2">
-                                <li><a href="{{ route('customer.dashboard') }}" class="text-gray-500 hover:text-pink-600 text-sm transition-colors">Dashboard</a></li>
-                                <li><a href="{{ route('customer.appointments.index') }}" class="text-gray-500 hover:text-pink-600 text-sm transition-colors">My Appointments</a></li>
-                                <li><a href="{{ route('customer.staff') }}" class="text-gray-500 hover:text-pink-600 text-sm transition-colors">Book a Service</a></li>
-                                <li><a href="{{ route('customer.profile.edit') }}" class="text-gray-500 hover:text-pink-600 text-sm transition-colors">My Profile</a></li>
+                                <li><a href="{{ route('customer.dashboard') }}" class="text-gray-500 hover:text-[var(--primary)] text-sm transition-colors">Dashboard</a></li>
+                                <li><a href="{{ route('customer.appointments.index') }}" class="text-gray-500 hover:text-[var(--primary)] text-sm transition-colors">My Appointments</a></li>
+                                <li><a href="{{ route('customer.staff') }}" class="text-gray-500 hover:text-[var(--primary)] text-sm transition-colors">Book a Service</a></li>
+                                <li><a href="{{ route('customer.profile.edit') }}" class="text-gray-500 hover:text-[var(--primary)] text-sm transition-colors">My Profile</a></li>
                             </ul>
                         </div>
                         
@@ -327,16 +342,16 @@
                             <h4 class="font-semibold text-gray-900 mb-4">Contact Us</h4>
                             <ul class="space-y-2 text-sm text-gray-500">
                                 <li class="flex items-center">
-                                    <i class="fas fa-phone mr-2 text-pink-400 w-4"></i>
-                                    <span>(+63) 123-456-7890</span>
+                                    <i class="fas fa-phone mr-2 text-[var(--primary)] w-4"></i>
+                                    <span>(02) 8123-4567</span>
                                 </li>
                                 <li class="flex items-center">
-                                    <i class="fas fa-envelope mr-2 text-pink-400 w-4"></i>
-                                    <span>hello@bellezarosa.com</span>
+                                    <i class="fas fa-envelope mr-2 text-[var(--primary)] w-4"></i>
+                                    <span>bellezarosa@gmail.com</span>
                                 </li>
                                 <li class="flex items-start">
-                                    <i class="fas fa-map-marker-alt mr-2 text-pink-400 w-4 mt-1"></i>
-                                    <span>123 Beauty Lane, Makati City</span>
+                                    <i class="fas fa-map-marker-alt mr-2 text-[var(--primary)] w-4 mt-1"></i>
+                                    <span>2nd Floor Victoria Plaza, Davao City</span>
                                 </li>
                             </ul>
                         </div>
@@ -345,13 +360,13 @@
                     <div class="border-t border-gray-100 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
                         <p class="text-sm text-gray-400">&copy; {{ date('Y') }} Belleza Rosa Spa. All rights reserved.</p>
                         <div class="flex space-x-4 mt-4 md:mt-0">
-                            <a href="#" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-pink-100 hover:text-pink-500 transition-colors">
+                            <a href="https://www.facebook.com/bellezarosasalon" target="_blank" rel="noopener noreferrer" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-blue-100 hover:text-[var(--primary)] transition-colors">
                                 <i class="fab fa-facebook-f"></i>
                             </a>
-                            <a href="#" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-pink-100 hover:text-pink-500 transition-colors">
+                            <a href="#" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-blue-100 hover:text-[var(--primary)] transition-colors">
                                 <i class="fab fa-instagram"></i>
                             </a>
-                            <a href="#" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-pink-100 hover:text-pink-500 transition-colors">
+                            <a href="#" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:bg-blue-100 hover:text-[var(--primary)] transition-colors">
                                 <i class="fab fa-twitter"></i>
                             </a>
                         </div>
@@ -402,23 +417,10 @@
 
         // Dropdown toggle functionality
         document.addEventListener('DOMContentLoaded', function() {
-            // Notification dropdown toggle
-            const notificationToggle = document.getElementById('notificationToggle');
-            const notificationDropdown = document.getElementById('notificationDropdown');
-            
-            if (notificationToggle && notificationDropdown) {
-                notificationToggle.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    notificationDropdown.classList.toggle('hidden');
-                    // Close user dropdown if open
-                    const userDropdown = document.getElementById('userDropdown');
-                    if (userDropdown) userDropdown.classList.add('hidden');
-                });
-            }
-            
             // User menu dropdown toggle
             const userMenuToggle = document.getElementById('userMenuToggle');
             const userDropdown = document.getElementById('userDropdown');
+            const notificationDropdown = document.getElementById('notificationDropdown');
             
             if (userMenuToggle && userDropdown) {
                 userMenuToggle.addEventListener('click', function(e) {
@@ -432,10 +434,16 @@
             // Close dropdowns when clicking outside
             document.addEventListener('click', function(e) {
                 if (notificationDropdown && !notificationDropdown.contains(e.target)) {
-                    notificationDropdown.classList.add('hidden');
+                    const notificationToggle = document.getElementById('notificationToggle');
+                    if (!notificationToggle || !notificationToggle.contains(e.target)) {
+                        notificationDropdown.classList.add('hidden');
+                    }
                 }
                 if (userDropdown && !userDropdown.contains(e.target)) {
-                    userDropdown.classList.add('hidden');
+                    const userMenuToggle = document.getElementById('userMenuToggle');
+                    if (!userMenuToggle || !userMenuToggle.contains(e.target)) {
+                        userDropdown.classList.add('hidden');
+                    }
                 }
             });
             

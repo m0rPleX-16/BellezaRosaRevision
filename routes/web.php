@@ -25,6 +25,15 @@ Route::get('/', function () {
     return view('landing');
 })->name('landing');
 
+// Static Pages
+Route::get('/privacy', function () {
+    return view('privacy');
+})->name('privacy');
+
+Route::get('/terms', function () {
+    return view('terms');
+})->name('terms');
+
 // Custom Authentication
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -167,7 +176,8 @@ Route::middleware(['auth'])->group(function () {
             // Specific routes must come before parameterized routes
             Route::get('/settings', [CommissionController::class, 'showSettings'])->name('settings');
             Route::post('/settings', [CommissionController::class, 'updateSettings'])->name('settings.update');
-            Route::get('/report/generate', [CommissionController::class, 'generateReport'])->name('report');
+            Route::get('/report', [CommissionController::class, 'showReportForm'])->name('report');
+            Route::post('/report/generate', [CommissionController::class, 'generateReport'])->name('report.generate');
             Route::post('/bulk-pay', [CommissionController::class, 'payCommissions'])->name('bulk-pay');
             // Parameterized routes come last
             Route::get('/{commission}', [CommissionController::class, 'show'])->name('show');

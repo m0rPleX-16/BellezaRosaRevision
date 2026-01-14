@@ -821,7 +821,7 @@ class AppointmentController extends Controller
         if ($newStatus === 'in_progress' && $currentDateTime->lt($appointmentDate)) {
             $formattedDate = $appointmentDate->format('M j, Y g:i A');
             return back()->withErrors([
-                'status' => "Cannot start appointment before the scheduled date ($formattedDate)."
+                'status' => "Cannot start appointment before the scheduled time ($formattedDate). The appointment timeslot is not available yet."
             ]);
         }
 

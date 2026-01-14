@@ -40,9 +40,9 @@
             <!-- Profile Tab -->
             <div id="content-profile" class="profile-tab-content">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-pink-50 to-rose-50">
+                    <div class="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                         <div class="flex items-center">
-                            <div class="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl flex items-center justify-center mr-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dark)] rounded-xl flex items-center justify-center mr-4">
                                 <i class="fas fa-user text-white text-xl"></i>
                             </div>
                             <div>
@@ -60,9 +60,9 @@
             <!-- Security Tab -->
             <div id="content-security" class="profile-tab-content hidden">
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                    <div class="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-[var(--gold-light)] to-[var(--gold)]">
                         <div class="flex items-center">
-                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] rounded-xl flex items-center justify-center mr-4">
                                 <i class="fas fa-lock text-white text-xl"></i>
                             </div>
                             <div>
@@ -80,9 +80,9 @@
             <!-- Account Tab -->
             <div id="content-account" class="profile-tab-content hidden">
                 <div class="bg-white rounded-2xl shadow-sm border-2 border-red-100 overflow-hidden">
-                    <div class="px-8 py-6 border-b border-red-100 bg-gradient-to-r from-red-50 to-rose-50">
+                    <div class="px-8 py-6 border-b border-red-100 bg-gradient-to-r from-red-50 to-orange-50">
                         <div class="flex items-center">
-                            <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center mr-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center mr-4">
                                 <i class="fas fa-exclamation-triangle text-white text-xl"></i>
                             </div>
                             <div>
