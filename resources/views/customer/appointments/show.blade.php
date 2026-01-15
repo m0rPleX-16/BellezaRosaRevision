@@ -181,6 +181,33 @@
                 </div>
             </div>
 
+            <!-- Cancellation Details Section -->
+            @if(in_array($appointment->status, ['cancelled', 'failed']) && !empty($appointment->cancellation_reason))
+                <div class="bg-red-50 rounded-xl p-4 mb-6 border border-red-200">
+                    <h3 class="text-sm font-semibold text-red-700 uppercase tracking-wide mb-3">
+                        <i class="fas fa-times-circle mr-2"></i>Cancellation Details
+                    </h3>
+                    <div class="space-y-2">
+                        <div class="flex items-start">
+                            <span class="text-sm font-medium text-gray-600 mr-2">Reason:</span>
+                            <p class="text-sm text-gray-800 flex-1">{{ $appointment->cancellation_reason }}</p>
+                        </div>
+                        @if($appointment->cancelled_at)
+                            <div class="flex items-center">
+                                <span class="text-sm font-medium text-gray-600 mr-2">Cancelled on:</span>
+                                <span class="text-sm text-gray-800">{{ $appointment->cancelled_at->format('M j, Y \a\t g:i A') }}</span>
+                            </div>
+                        @endif
+                        @if($appointment->cancelled_by && $appointment->cancelledByUser)
+                            <div class="flex items-center">
+                                <span class="text-sm font-medium text-gray-600 mr-2">Cancelled by:</span>
+                                <span class="text-sm text-gray-800">{{ $appointment->cancelledByUser->full_name }}</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             <!-- Compact Notes Section -->
             @if(!empty($appointment->notes))
                 <div class="bg-amber-50 rounded-xl p-4 mb-6 border border-amber-200">

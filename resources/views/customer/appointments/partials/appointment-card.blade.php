@@ -165,6 +165,21 @@
             </div>
         </div>
         
+        <!-- Cancellation Details (if cancelled) -->
+        @if(in_array($appointment->status, ['cancelled', 'failed']) && !empty($appointment->cancellation_reason))
+            <div class="mt-4 p-3 bg-red-50 rounded-xl border border-red-200">
+                <p class="text-xs text-red-600 uppercase tracking-wide mb-1 font-semibold">
+                    <i class="fas fa-info-circle mr-1"></i> Cancellation Details
+                </p>
+                <p class="text-sm text-gray-700">{{ $appointment->cancellation_reason }}</p>
+                @if($appointment->cancelled_at)
+                    <p class="text-xs text-gray-500 mt-1">
+                        Cancelled: {{ $appointment->cancelled_at->format('M j, Y g:i A') }}
+                    </p>
+                @endif
+            </div>
+        @endif
+        
         <!-- Notes (if exists) -->
         @if(!empty($appointment->notes))
             <div class="mt-4 p-3 bg-gray-50 rounded-xl">

@@ -276,11 +276,30 @@
                 </div>
             @endif
 
-            <!-- Cancellation Reason -->
+            <!-- Cancellation Details -->
             @if(!empty($appointment->cancellation_reason))
                 <div class="mt-6 pt-6 border-t border-gray-200">
-                    <h3 class="text-sm font-medium text-gray-500 mb-2">Cancellation Reason</h3>
-                    <p class="text-base text-gray-900">{{ $appointment->cancellation_reason }}</p>
+                    <h3 class="text-sm font-medium text-gray-500 mb-3">Cancellation Details</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Reason</label>
+                            <p class="text-base text-gray-900">{{ $appointment->cancellation_reason }}</p>
+                        </div>
+                        @if($appointment->cancelled_at)
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-500 mb-1">Cancelled On</label>
+                                    <p class="text-base text-gray-900">{{ $appointment->cancelled_at->format('M j, Y \a\t g:i A') }}</p>
+                                </div>
+                                @if($appointment->cancelled_by && $appointment->cancelledByUser)
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-500 mb-1">Cancelled By</label>
+                                        <p class="text-base text-gray-900">{{ $appointment->cancelledByUser->full_name }}</p>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
                 </div>
             @endif
 
