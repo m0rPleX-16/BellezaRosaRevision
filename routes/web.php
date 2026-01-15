@@ -72,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/create', [AppointmentController::class, 'create'])->name('create');
             Route::post('/', [AppointmentController::class, 'store'])->name('store');
             Route::get('/{appointment}', [AppointmentController::class, 'show'])->name('show');
+            Route::get('/{appointment}/cancel', [AppointmentController::class, 'showCustomerCancelForm'])->name('cancel.form');
             Route::post('/{appointment}/cancel', [AppointmentController::class, 'cancel'])->name('cancel');
             Route::post('/check-availability', [AppointmentController::class, 'checkAvailability'])->name('checkAvailability');
         });

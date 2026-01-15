@@ -178,15 +178,11 @@
         <!-- Action Buttons -->
         <div class="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2 justify-end">
             @if($canCancel)
-                <form action="{{ route('customer.appointments.cancel', $appointment) }}" method="POST" class="inline">
-                    @csrf
-                    <button type="button" 
-                            onclick="if(confirm('Are you sure you want to cancel this appointment? This action cannot be undone.')) { this.form.submit(); }"
-                            class="inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-xl text-gray-600 bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors">
-                        <i class="fas fa-times mr-2"></i>
-                        Cancel
-                    </button>
-                </form>
+                <a href="{{ route('customer.appointments.cancel.form', $appointment) }}" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-200 text-sm font-medium rounded-xl text-gray-600 bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors">
+                    <i class="fas fa-times mr-2"></i>
+                    Cancel
+                </a>
             @endif
             
             @if($canReschedule)

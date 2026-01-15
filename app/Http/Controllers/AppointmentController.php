@@ -1057,6 +1057,26 @@ class AppointmentController extends Controller
         return view('dashboard.appointments.cancel', compact('appointment'));
     }
 
+    public function showCustomerCancelForm(Appointment $appointment)
+    {
+        // Check if this is a customer route - ensure customer can only cancel their own appointments
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $customer = $user->customer;
+        
+        if (!$customer || $appointment->customer_id !== $customer->id) {
+            abort(403, 'You can only cancel your own appointments.');
+        }
+        
+        // Check if appointment can be cancelled (only upcoming appointments)
+        $appointmentDate = \Carbon\Carbon::parse($appointment->start_datetime);
+        if (!in_array($appointment->status, ['scheduled', 'confirmed']) || !$appointmentDate->isFuture()) {
+            abort(403, 'This appointment cannot be cancelled.');
+        }
+        
+        return view('customer.appointments.cancel', compact('appointment'));
+    }
+
     public function cancel(Request $request, Appointment $appointment)
     {
         // For customer cancellations, make reason optional and default status to cancelled
