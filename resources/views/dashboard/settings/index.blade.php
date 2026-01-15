@@ -70,19 +70,14 @@
                         <!-- Slot Interval -->
                         <div>
                             <label for="slot_interval_minutes" class="block text-sm font-medium text-gray-700 mb-2">
-                                Time Slot Interval (minutes) <span class="text-red-500">*</span>
+                                Time Slot Interval <span class="text-red-500">*</span>
                             </label>
-                            <input type="number" 
-                                name="slot_interval_minutes" 
-                                id="slot_interval_minutes"
-                                value="{{ old('slot_interval_minutes', $settings->slot_interval_minutes ?? 30) }}"
-                                min="5"
-                                max="120"
-                                step="5"
-                                required
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                            <div class="bg-gray-100 border border-gray-300 rounded-xl px-4 py-3 text-gray-700">
+                                <i class="fas fa-clock mr-2"></i>60 minutes (hourly slots only)
+                            </div>
+                            <input type="hidden" name="slot_interval_minutes" value="60" readonly>
                             <p class="mt-2 text-sm text-gray-500">
-                                The interval between available appointment time slots (e.g., 30 for 30-minute intervals).
+                                Appointments are scheduled on hourly intervals (e.g., 9:00, 10:00, 11:00, etc.).
                             </p>
                             @error('slot_interval_minutes')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -150,7 +145,7 @@
                             <div class="mt-2 text-sm text-blue-700">
                                 <ul class="list-disc list-inside space-y-1">
                                     <li>Changes to business hours will affect all new bookings immediately.</li>
-                                    <li>Time slot intervals determine how appointments are scheduled (e.g., 30 minutes = slots at 9:00, 9:30, 10:00, etc.).</li>
+                                    <li>Time slots are set to hourly intervals (e.g., 9:00, 10:00, 11:00, etc.).</li>
                                     <li>Maximum days ahead limits how far in advance customers can book.</li>
                                     <li>Cancellation cutoff prevents last-minute cancellations.</li>
                                 </ul>

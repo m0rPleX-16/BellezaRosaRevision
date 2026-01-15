@@ -155,6 +155,62 @@ class AppointmentController extends Controller
             $query->whereDate('start_datetime', $date);
         }
 
+        // 4. Date range filters (same as dashboard)
+        $dateRange = request('date_range');
+        if ($dateRange) {
+            switch ($dateRange) {
+                case 'today':
+                    $query->whereDate('start_datetime', today());
+                    break;
+                    
+                case 'yesterday':
+                    $query->whereDate('start_datetime', today()->subDay());
+                    break;
+                    
+                case 'this_week':
+                    $query->whereBetween('start_datetime', [
+                        today()->startOfWeek(),
+                        today()->endOfWeek()
+                    ]);
+                    break;
+                    
+                case 'last_week':
+                    $query->whereBetween('start_datetime', [
+                        today()->subWeek()->startOfWeek(),
+                        today()->subWeek()->endOfWeek()
+                    ]);
+                    break;
+                    
+                case 'this_month':
+                    $query->whereMonth('start_datetime', now()->month)
+                         ->whereYear('start_datetime', now()->year);
+                    break;
+                    
+                case 'last_month':
+                    $query->whereMonth('start_datetime', now()->subMonth()->month)
+                         ->whereYear('start_datetime', now()->subMonth()->year);
+                    break;
+                    
+                case 'custom':
+                    if ($customDate = request('custom_date')) {
+                        $query->whereMonth('start_datetime', Carbon::createFromFormat('Y-m', $customDate)->month)
+                             ->whereYear('start_datetime', Carbon::createFromFormat('Y-m', $customDate)->year);
+                    }
+                    break;
+                    
+                case 'custom_range':
+                    $dateFrom = request('date_from');
+                    $dateTo = request('date_to');
+                    if ($dateFrom && $dateTo) {
+                        $query->whereBetween('start_datetime', [
+                            Carbon::parse($dateFrom)->startOfDay(),
+                            Carbon::parse($dateTo)->endOfDay()
+                        ]);
+                    }
+                    break;
+            }
+        }
+
         // Default sorting: newest first
         // Filter out appointments with missing relationships (orphaned data)
         $appointments = $query->whereHas('customer')
@@ -738,7 +794,7 @@ class AppointmentController extends Controller
             $closingTime = is_string($salonSettings->closing_time) 
                 ? $salonSettings->closing_time 
                 : (string)$salonSettings->closing_time ?? '20:00:00';
-            $interval = $salonSettings->slot_interval_minutes ?? 30;
+            $interval = 60; // Fixed to hourly slots (60 minutes)
             
             // Ensure time format is H:i:s
             if (strlen($openingTime) === 5) {

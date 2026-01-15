@@ -65,9 +65,17 @@ class DashboardController extends Controller
 
     // Return the view with all data
     return view('dashboard.index', array_merge(
-        $stats,
+        [
+            'stats' => $stats, // Add the complete stats array
+            'appointments_count' => $stats['appointments_count'],
+            'revenue' => $stats['revenue'],
+            'customers_count' => $stats['customers_count'],
+            'stats_label' => $stats['stats_label'],
+            'total_staff' => $stats['total_staff'],
+        ],
         $appointmentsData,
         [
+            'appointments' => $appointmentsData['rangeAppointments'],
             'customers' => $customers,
             'services' => $services,
             'staff' => $staff,
@@ -228,6 +236,69 @@ public function filter(Request $request)
     $dateFrom = $request->get('date_from');
     $dateTo = $request->get('date_to');
     
+    // Enhanced validation for custom filters
+    if ($dateRange === 'custom_range') {
+        $request->validate([
+            'date_from' => 'required|date|before_or_equal:date_to',
+            'date_to' => 'required|date|after_or_equal:date_from',
+        ], [
+            'date_from.required' => 'Start date is required',
+            'date_from.date' => 'Start date must be a valid date',
+        ]);
+        
+        // Additional validation: dates should not be too far in the past or future
+        if ($dateFrom && $dateTo) {
+            $startDate = Carbon::parse($dateFrom);
+            $endDate = Carbon::parse($dateTo);
+            
+            // Don't allow dates more than 1 year in the past
+            if ($startDate < now()->subYear()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Date range cannot be more than 1 year in the past'
+                ], 422);
+            }
+            
+            // Don't allow dates more than 6 months in the future
+            if ($startDate > now()->addMonths(6)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Date range cannot be more than 6 months in the future'
+                ], 422);
+            }
+        }
+    }
+    
+    if ($dateRange === 'custom') {
+        $request->validate([
+            'custom_date' => 'required|date_format:Y-m',
+        ], [
+            'custom_date.required' => 'Month is required',
+            'custom_date.date_format' => 'Month must be in YYYY-MM format',
+        ]);
+        
+        // Additional validation for custom month
+        if ($customDate) {
+            $monthDate = Carbon::createFromFormat('Y-m', $customDate);
+            
+            // Don't allow months more than 1 year in the past
+            if ($monthDate < now()->subYear()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Month cannot be more than 1 year in the past'
+                ], 422);
+            }
+            
+            // Don't allow months more than 6 months in the future
+            if ($monthDate > now()->addMonths(6)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Month cannot be more than 6 months in the future'
+                ], 422);
+            }
+        }
+    }
+    
     $dateRangeData = $this->getDateRange($dateRange, $customDate, $dateFrom, $dateTo);
     $stats = $this->getDashboardStats($dateRangeData['start'], $dateRangeData['end'], $dateRangeData['label']);
     $appointmentsData = $this->getAppointmentsData($dateRangeData['start'], $dateRangeData['end']);
@@ -238,7 +309,19 @@ public function filter(Request $request)
     return response()->json([
         'success' => true,
         'stats' => $stats,
-        'appointments' => $appointmentsData['rangeAppointments'],
+        'appointments' => $appointmentsData['rangeAppointments']->map(function ($appointment) {
+            return [
+                'id' => $appointment->id,
+                'start_datetime' => $appointment->start_datetime,
+                'customer' => [
+                    'full_name' => $appointment->customer?->full_name ?? 'Deleted Customer'
+                ],
+                'service' => [
+                    'name' => $appointment->service?->name ?? 'Deleted Service'
+                ],
+                'status' => $appointment->status
+            ];
+        }),
         'customer_services' => $customerServicesData,
         'label' => $dateRangeData['label'],
         'date_range' => [
@@ -277,7 +360,22 @@ private function getCustomerServicesData($startDate, $endDate)
         ->first();
 
     return [
-        'customers' => $customersWithServices,
+        'customers' => $customersWithServices->map(function ($customer) {
+            return [
+                'full_name' => $customer->full_name,
+                'phone' => $customer->phone,
+                'total_visits' => $customer->range_appointments_count ?? 0,
+                'total_spent' => $customer->appointments->sum('total_amount') ?? 0,
+                'appointments' => $customer->appointments->map(function ($appointment) {
+                    return [
+                        'start_datetime' => $appointment->start_datetime,
+                        'service' => [
+                            'name' => $appointment->service?->name ?? 'Deleted Service'
+                        ]
+                    ];
+                })
+            ];
+        }),
         'total_services' => $totalServices,
         'popular_service' => $popularService?->service?->name ?? 'N/A'
     ];

@@ -4,7 +4,7 @@
     $openingTime = $salonSettings->opening_time;
     $closingTime = $salonSettings->closing_time;
     $maxDaysAhead = $salonSettings->max_days_book_ahead;
-    $slotInterval = $salonSettings->slot_interval_minutes;
+    $slotInterval = 60; // Fixed to hourly slots
 @endphp
 
 <!-- Booking Modal -->

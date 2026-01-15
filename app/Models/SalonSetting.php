@@ -24,7 +24,7 @@ class SalonSetting extends Model
     protected $attributes = [
         'opening_time' => '09:00:00',
         'closing_time' => '20:00:00',
-        'slot_interval_minutes' => 30,
+        'slot_interval_minutes' => 60,
         'max_days_book_ahead' => 60,
         'cancel_cutoff_hours' => 2,
     ];

@@ -204,7 +204,6 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // Legacy routes (kept for backward compatibility or external links)
-Route::get('/appointments', [AppointmentController::class, 'index'])->name('dashboard.appointments.index');
 Route::get('/appointments/create', [AppointmentController::class, 'create'])->name('dashboard.appointments.create');
 Route::post('/appointments', [AppointmentController::class, 'store'])->name('dashboard.appointments.store');
 Route::get('/staff', [StaffController::class, 'index'])->name('dashboard.staff.index');
