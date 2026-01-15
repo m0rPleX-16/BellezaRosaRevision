@@ -58,6 +58,40 @@
                                     </div>
                                 </div>
                                 
+                                <!-- Schedule Information -->
+                                @if(isset($staff['schedule_summary']) && $staff['schedule_summary'] !== 'No schedule available')
+                                    <div class="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                                        <div class="flex items-start">
+                                            <i class="fas fa-clock text-blue-500 mt-0.5 mr-2 text-sm"></i>
+                                            <div class="flex-1">
+                                                <p class="text-xs font-semibold text-blue-700 mb-1">Available Hours</p>
+                                                <p class="text-xs text-blue-600 leading-relaxed">{{ $staff['schedule_summary'] }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <!-- Schedule Details (Expandable) -->
+                                @if(isset($staff['schedules']) && count($staff['schedules']) > 0)
+                                    <div class="mb-3">
+                                        <button onclick="toggleSchedule({{ $staff['id'] }})" 
+                                                class="flex items-center text-xs text-gray-500 hover:text-[var(--primary)] transition-colors">
+                                            <i class="fas fa-calendar-alt mr-1"></i>
+                                            <span id="schedule-toggle-text-{{ $staff['id'] }}">Show detailed schedule</span>
+                                            <i id="schedule-toggle-icon-{{ $staff['id'] }}" class="fas fa-chevron-down ml-1 transition-transform"></i>
+                                        </button>
+                                        
+                                        <div id="schedule-details-{{ $staff['id'] }}" class="hidden mt-2 p-2 bg-gray-50 rounded-lg border border-gray-100">
+                                            @foreach($staff['schedules'] as $schedule)
+                                                <div class="flex items-center justify-between text-xs py-1">
+                                                    <span class="font-medium text-gray-700">{{ $schedule['day_name'] }}</span>
+                                                    <span class="text-gray-600">{{ $schedule['start_time'] }} - {{ $schedule['end_time'] }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                                
                                 <!-- Compact Actions -->
                                 <div class="pt-2 border-t border-gray-100">
                                     <span class="inline-flex items-center text-sm font-semibold text-[var(--primary)] group-hover:text-[var(--primary-dark)]">
@@ -123,6 +157,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+function toggleSchedule(staffId) {
+    const details = document.getElementById('schedule-details-' + staffId);
+    const toggleText = document.getElementById('schedule-toggle-text-' + staffId);
+    const toggleIcon = document.getElementById('schedule-toggle-icon-' + staffId);
+    
+    if (details.classList.contains('hidden')) {
+        details.classList.remove('hidden');
+        toggleText.textContent = 'Hide detailed schedule';
+        toggleIcon.classList.add('rotate-180');
+    } else {
+        details.classList.add('hidden');
+        toggleText.textContent = 'Show detailed schedule';
+        toggleIcon.classList.remove('rotate-180');
+    }
+}
 </script>
 @endpush
 @endsection

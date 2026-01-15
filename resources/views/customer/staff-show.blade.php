@@ -64,6 +64,86 @@
                 </div>
             </div>
 
+            <!-- Schedule Information Section -->
+            <div class="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+                <div class="px-8 py-6 border-b border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">Working Schedule</h2>
+                            <p class="text-gray-500 mt-1">Available time slots for appointments</p>
+                        </div>
+                        <div class="hidden sm:flex items-center text-sm text-gray-500">
+                            <i class="fas fa-clock text-[var(--primary)] mr-2"></i>
+                            Weekly availability
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-8">
+                    @if($formattedSchedules && $formattedSchedules->isNotEmpty())
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            @php
+                                $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                                $dayColors = [
+                                    'Monday' => 'from-blue-500 to-blue-600',
+                                    'Tuesday' => 'from-green-500 to-green-600', 
+                                    'Wednesday' => 'from-yellow-500 to-yellow-600',
+                                    'Thursday' => 'from-purple-500 to-purple-600',
+                                    'Friday' => 'from-pink-500 to-pink-600',
+                                    'Saturday' => 'from-indigo-500 to-indigo-600',
+                                    'Sunday' => 'from-red-500 to-red-600',
+                                ];
+                            @endphp
+                            
+                            @foreach($days as $day)
+                                @if(isset($formattedSchedules[$day]))
+                                    @php
+                                        $schedule = $formattedSchedules[$day];
+                                        $colorClass = $dayColors[$day] ?? 'from-gray-500 to-gray-600';
+                                    @endphp
+                                    <div class="schedule-card bg-gradient-to-br {{ $colorClass }} p-4 rounded-xl text-white shadow-lg transform hover:scale-105 transition-all duration-300">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <h3 class="font-bold text-lg">{{ $day }}</h3>
+                                            <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-calendar-check text-sm"></i>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <div class="flex items-center text-sm">
+                                                <i class="fas fa-clock mr-2"></i>
+                                                <span>{{ $schedule['start_time'] }} - {{ $schedule['end_time'] }}</span>
+                                            </div>
+                                            @if($schedule['max_appointments'])
+                                                <div class="flex items-center text-xs opacity-90">
+                                                    <i class="fas fa-users mr-2"></i>
+                                                    <span>{{ $schedule['formatted_limit'] }}</span>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 p-4 rounded-xl text-center">
+                                        <div class="text-gray-400">
+                                            <i class="fas fa-calendar-times text-2xl mb-2"></i>
+                                            <p class="text-sm font-medium">{{ $day }}</p>
+                                            <p class="text-xs">Not Available</p>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-12">
+                            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-calendar-times text-3xl text-gray-400"></i>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-2">No Schedule Available</h3>
+                            <p class="text-gray-500 max-w-sm mx-auto">This staff member hasn't set their working schedule yet. Please check back later.</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
             <!-- Available Services Section -->
             <div class="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
                 <div class="px-8 py-6 border-b border-gray-100">

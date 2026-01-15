@@ -46,19 +46,38 @@ class DashboardController extends Controller
 
     public function staff()
     {
-        // Get all active staff members with their user information
-        $staffMembers = Staff::with('user')
+        // Get all active staff members with their user information, active schedules, and schedule details
+        $staffMembers = Staff::with(['user', 'schedules' => function($query) {
+                $query->where('is_active', true)
+                      ->orderBy('day_of_week')
+                      ->select('staff_id', 'day_of_week', 'start_time', 'end_time', 'max_appointments', 'is_active');
+            }])
             ->whereHas('user', function($query) {
+                $query->where('is_active', true);
+            })
+            ->whereHas('schedules', function($query) {
                 $query->where('is_active', true);
             })
             ->get()
             ->map(function($staff) {
+                $scheduleInfo = $staff->schedules->map(function($schedule) {
+                    return [
+                        'day' => $schedule->day_of_week,
+                        'day_name' => ucfirst($schedule->day_of_week),
+                        'start_time' => \Carbon\Carbon::parse($schedule->start_time)->format('g:i A'),
+                        'end_time' => \Carbon\Carbon::parse($schedule->end_time)->format('g:i A'),
+                        'max_appointments' => $schedule->max_appointments,
+                    ];
+                });
+
                 return [
                     'id' => $staff->id,
                     'name' => $staff->user->full_name ?? 'Staff Member',
                     'specialty' => $staff->formatted_specialty ?? 'All Services',
                     'gender' => $staff->user->gender ? $staff->user->formatted_gender : null,
                     'color_code' => $staff->color_code ?? '#3B82F6',
+                    'schedules' => $scheduleInfo,
+                    'schedule_summary' => $this->generateScheduleSummary($scheduleInfo),
                 ];
             })
             ->values(); // Reset array keys
@@ -66,13 +85,96 @@ class DashboardController extends Controller
         return view('customer.staff', compact('staffMembers'));
     }
 
+    /**
+     * Generate a human-readable schedule summary
+     */
+    private function generateScheduleSummary($schedules)
+    {
+        if ($schedules->isEmpty()) {
+            return 'No schedule available';
+        }
+
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        $scheduleMap = [];
+        
+        foreach ($schedules as $schedule) {
+            $scheduleMap[$schedule['day']] = $schedule;
+        }
+
+        // Find consecutive days with same hours
+        $groups = [];
+        $currentGroup = null;
+        
+        foreach ($days as $day) {
+            if (isset($scheduleMap[$day])) {
+                $schedule = $scheduleMap[$day];
+                $timeSlot = $schedule['start_time'] . ' - ' . $schedule['end_time'];
+                
+                if ($currentGroup && $currentGroup['time_slot'] === $timeSlot) {
+                    $currentGroup['days'][] = $schedule['day_name'];
+                } else {
+                    if ($currentGroup) {
+                        $groups[] = $currentGroup;
+                    }
+                    $currentGroup = [
+                        'time_slot' => $timeSlot,
+                        'days' => [$schedule['day_name']]
+                    ];
+                }
+            } else {
+                if ($currentGroup) {
+                    $groups[] = $currentGroup;
+                    $currentGroup = null;
+                }
+            }
+        }
+        
+        if ($currentGroup) {
+            $groups[] = $currentGroup;
+        }
+
+        // Format the groups into readable text
+        $summary = [];
+        foreach ($groups as $group) {
+            if (count($group['days']) === 1) {
+                $summary[] = $group['days'][0] . ': ' . $group['time_slot'];
+            } elseif (count($group['days']) === 2) {
+                $summary[] = $group['days'][0] . ' & ' . $group['days'][1] . ': ' . $group['time_slot'];
+            } else {
+                $summary[] = $group['days'][0] . ' - ' . end($group['days']) . ': ' . $group['time_slot'];
+            }
+        }
+
+        return implode(', ', $summary);
+    }
+
     public function showStaff($id)
     {
-        $staff = Staff::with('user')->findOrFail($id);
+        $staff = Staff::with(['user', 'schedules' => function($query) {
+                $query->where('is_active', true)
+                      ->orderBy('day_of_week');
+            }])->findOrFail($id);
         
         if (!$staff->user || !$staff->user->is_active) {
             abort(404, 'Staff member not found.');
         }
+
+        // Check if staff has active schedules
+        if (!$staff->schedules()->where('is_active', true)->exists()) {
+            abort(404, 'Staff member not available for booking.');
+        }
+
+        // Format schedules for display
+        $formattedSchedules = $staff->schedules->map(function($schedule) {
+            return [
+                'day_name' => ucfirst($schedule->day_of_week),
+                'start_time' => \Carbon\Carbon::parse($schedule->start_time)->format('g:i A'),
+                'end_time' => \Carbon\Carbon::parse($schedule->end_time)->format('g:i A'),
+                'max_appointments' => $schedule->max_appointments,
+                'formatted_time_range' => $schedule->formatted_time_range,
+                'formatted_limit' => $schedule->formatted_limit,
+            ];
+        })->keyBy('day_name');
 
         // Get services based on staff specialty
         $staffSpecialty = $staff->specialty ?? 'all';
@@ -101,6 +203,6 @@ class DashboardController extends Controller
                 return $service->category->name ?? 'Uncategorized';
             });
 
-        return view('customer.staff-show', compact('staff', 'services'));
+        return view('customer.staff-show', compact('staff', 'services', 'formattedSchedules'));
     }
 }

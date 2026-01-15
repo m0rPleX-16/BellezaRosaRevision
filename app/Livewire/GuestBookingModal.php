@@ -32,7 +32,14 @@ class GuestBookingModal extends Component
     public function mount()
     {
         $this->services = Service::where('is_active', true)->get();
-        $this->staff = Staff::with('user')->get();
+        $this->staff = Staff::with('user')
+            ->whereHas('user', function($query) {
+                $query->where('is_active', true);
+            })
+            ->whereHas('schedules', function($query) {
+                $query->where('is_active', true);
+            })
+            ->get();
         $this->date = today()->format('Y-m-d');
     }
 

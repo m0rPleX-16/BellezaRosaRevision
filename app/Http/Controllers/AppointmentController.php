@@ -207,7 +207,19 @@ class AppointmentController extends Controller
     public function create()
     {
         $customers = Customer::all();
-        $staff = Staff::with('user')->get();
+        
+        // For customer view, only show staff with active schedules
+        if (request()->routeIs('customer.*')) {
+            $staff = Staff::with('user')
+                ->whereHas('schedules', function($query) {
+                    $query->where('is_active', true);
+                })
+                ->get();
+        } else {
+            // For admin view, show all staff
+            $staff = Staff::with('user')->get();
+        }
+        
         $services = Service::where('is_active', true)->with('category')->get();
         $servicesByCategory = $services->groupBy('category.name');
 
