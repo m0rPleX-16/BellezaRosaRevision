@@ -49,7 +49,7 @@
                             <h3 class="font-semibold text-gray-900 text-sm">{{ $prefilledService->name }}</h3>
                             <div class="flex items-center justify-between mt-2">
                                 <span class="text-xs text-gray-500">{{ $prefilledService->duration_minutes }} min</span>
-                                <span class="text-sm font-bold text-[var(--gold)]">₱{{ number_format($prefilledService->price_premium ?? $prefilledService->price_regular, 2) }}</span>
+                                <span class="text-sm font-bold text-[var(--gold)]">₱<span id="prefilled-price-display">{{ number_format($prefilledService->price_regular, 2) }}</span></span>
                             </div>
                             <input type="hidden" name="service_id" id="service_id" value="{{ $prefilledService->id }}">
                             <input type="hidden" id="service_duration" value="{{ $prefilledService->duration_minutes }}">
@@ -71,6 +71,68 @@
                             <input type="hidden" id="staff_name" value="{{ $prefilledStaff->user->full_name }}">
                         </div>
                     </div>
+
+                    <!-- Service Level Selection for Prefilled -->
+                    @if($prefilledService->price_premium)
+                        <div class="mb-6">
+                            <label class="block text-xs font-semibold text-gray-700 mb-3">
+                                <i class="fas fa-star text-[var(--gold)] mr-1"></i>Service Level <span class="text-red-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="service-level-option">
+                                    <input type="radio" name="service_level" id="prefilled_service_level_regular" value="regular" checked
+                                           class="peer sr-only" onchange="updatePrefilledSummary()">
+                                    <label for="prefilled_service_level_regular" 
+                                           class="block p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all peer-checked:border-[var(--primary)] peer-checked:bg-blue-50 hover:border-gray-300">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <div class="flex items-center">
+                                                <div class="w-5 h-5 border-2 border-gray-300 rounded-full peer-checked:border-[var(--primary)] peer-checked:bg-[var(--primary)] flex items-center justify-center mr-2">
+                                                    <div class="w-2 h-2 bg-white rounded-full hidden peer-checked:block"></div>
+                                                </div>
+                                                <span class="font-semibold text-gray-900">Regular</span>
+                                            </div>
+                                            <i class="fas fa-check-circle text-green-500"></i>
+                                        </div>
+                                        <p class="text-xs text-gray-600 mb-2">Standard quality service</p>
+                                        <div class="text-lg font-bold text-gray-900">
+                                            ₱{{ number_format($prefilledService->price_regular, 2) }}
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="service-level-option">
+                                    <input type="radio" name="service_level" id="prefilled_service_level_premium" value="premium"
+                                           class="peer sr-only" onchange="updatePrefilledSummary()">
+                                    <label for="prefilled_service_level_premium" 
+                                           class="block p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all peer-checked:border-[var(--gold)] peer-checked:bg-yellow-50 hover:border-gray-300">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <div class="flex items-center">
+                                                <div class="w-5 h-5 border-2 border-gray-300 rounded-full peer-checked:border-[var(--gold)] peer-checked:bg-[var(--gold)] flex items-center justify-center mr-2">
+                                                    <div class="w-2 h-2 bg-white rounded-full hidden peer-checked:block"></div>
+                                                </div>
+                                                <span class="font-semibold text-gray-900">Premium</span>
+                                            </div>
+                                            <i class="fas fa-crown text-[var(--gold)]"></i>
+                                        </div>
+                                        <p class="text-xs text-gray-600 mb-2">Premium products & expert service</p>
+                                        <div class="text-lg font-bold text-[var(--gold)]">
+                                            ₱{{ number_format($prefilledService->price_premium, 2) }}
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Premium Benefits -->
+                            <div id="prefilled-premium-benefits" class="mt-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg hidden">
+                                <p class="text-xs font-semibold text-yellow-800 mb-2">
+                                    <i class="fas fa-gift mr-1"></i>Premium Benefits:
+                                </p>
+                                <ul class="text-xs text-yellow-700 space-y-1">
+                                    <li><i class="fas fa-check mr-1"></i>Premium professional plant-based products (organic, ammonia-free)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    @endif
                 @else
                     <!-- Service & Staff Selection (Side by side) -->
                     <div class="grid grid-cols-2 gap-4 mb-6">
@@ -85,7 +147,8 @@
                                     <option value="{{ $service->id }}"
                                         data-duration="{{ $service->duration_minutes }}"
                                         data-price="{{ $service->price_regular }}"
-                                        data-price-premium="{{ $service->price_premium ?? $service->price_regular }}">
+                                        data-price-premium="{{ $service->price_premium ?? $service->price_regular }}"
+                                        data-has-premium="{{ $service->price_premium ? 'true' : 'false' }}">
                                         {{ $service->name }} ({{ $service->duration_minutes }} min)
                                     </option>
                                 @endforeach
@@ -114,6 +177,69 @@
                             @error('staff_id')
                                 <p class="mt-1 text-xs text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p>
                             @enderror
+                        </div>
+                    </div>
+
+                    <!-- Service Level Selection -->
+                    <div id="service-level-section" class="mb-6 hidden">
+                        <label class="block text-xs font-semibold text-gray-700 mb-3">
+                            <i class="fas fa-star text-[var(--gold)] mr-1"></i>Service Level <span class="text-red-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="service-level-option">
+                                <input type="radio" name="service_level" id="service_level_regular" value="regular" checked
+                                       class="peer sr-only" onchange="updateSummary()">
+                                <label for="service_level_regular" 
+                                       class="block p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all peer-checked:border-[var(--primary)] peer-checked:bg-blue-50 hover:border-gray-300">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center">
+                                            <div class="w-5 h-5 border-2 border-gray-300 rounded-full peer-checked:border-[var(--primary)] peer-checked:bg-[var(--primary)] flex items-center justify-center mr-2">
+                                                <div class="w-2 h-2 bg-white rounded-full hidden peer-checked:block"></div>
+                                            </div>
+                                            <span class="font-semibold text-gray-900">Regular</span>
+                                        </div>
+                                        <i class="fas fa-check-circle text-green-500"></i>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-2">Standard quality service</p>
+                                    <div class="text-lg font-bold text-gray-900">
+                                        ₱<span id="regular-price-display">0.00</span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="service-level-option">
+                                <input type="radio" name="service_level" id="service_level_premium" value="premium"
+                                       class="peer sr-only" onchange="updateSummary()">
+                                <label for="service_level_premium" 
+                                       class="block p-4 border-2 border-gray-200 rounded-lg cursor-pointer transition-all peer-checked:border-[var(--gold)] peer-checked:bg-yellow-50 hover:border-gray-300">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center">
+                                            <div class="w-5 h-5 border-2 border-gray-300 rounded-full peer-checked:border-[var(--gold)] peer-checked:bg-[var(--gold)] flex items-center justify-center mr-2">
+                                                <div class="w-2 h-2 bg-white rounded-full hidden peer-checked:block"></div>
+                                            </div>
+                                            <span class="font-semibold text-gray-900">Premium</span>
+                                        </div>
+                                        <i class="fas fa-crown text-[var(--gold)]"></i>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-2">Premium products & expert service</p>
+                                    <div class="text-lg font-bold text-[var(--gold)]">
+                                        ₱<span id="premium-price-display">0.00</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Premium Benefits -->
+                        <div id="premium-benefits" class="mt-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg hidden">
+                            <p class="text-xs font-semibold text-yellow-800 mb-2">
+                                <i class="fas fa-gift mr-1"></i>Premium Benefits:
+                            </p>
+                            <ul class="text-xs text-yellow-700 space-y-1">
+                                <li><i class="fas fa-check mr-1"></i>Premium professional products (Davines, Schwarzkopf)</li>
+                                <li><i class="fas fa-check mr-1"></i>Extended treatment time</li>
+                                <li><i class="fas fa-check mr-1"></i>Expert staff assignment</li>
+                                <li><i class="fas fa-check mr-1"></i>Priority scheduling</li>
+                            </ul>
                         </div>
                     </div>
                 @endif
@@ -275,8 +401,12 @@ document.addEventListener('DOMContentLoaded', function() {
         staffName = document.getElementById('staff_name')?.value || '--';
         updateSummary();
     } else {
+        serviceSelect?.addEventListener('change', updateServiceLevel);
         serviceSelect?.addEventListener('change', updateSummary);
         staffSelect?.addEventListener('change', updateSummary);
+        
+        // Initialize service level UI on page load
+        updateServiceLevel();
     }
 
     dateInput?.addEventListener('change', fetchTimeSlots);
@@ -513,12 +643,64 @@ document.addEventListener('DOMContentLoaded', function() {
         if (startDatetimeInput) startDatetimeInput.value = '';
     }
 
+    function updateServiceLevel() {
+        const selectedService = serviceSelect?.options[serviceSelect.selectedIndex];
+        const hasPremium = selectedService?.dataset?.hasPremium === 'true';
+        const serviceLevelSection = document.getElementById('service-level-section');
+        const regularPriceDisplay = document.getElementById('regular-price-display');
+        const premiumPriceDisplay = document.getElementById('premium-price-display');
+        const premiumBenefits = document.getElementById('premium-benefits');
+        
+        if (hasPremium && serviceLevelSection && selectedService?.value) {
+            serviceLevelSection.classList.remove('hidden');
+            regularPriceDisplay.textContent = parseFloat(selectedService?.dataset?.price || '0').toFixed(2);
+            premiumPriceDisplay.textContent = parseFloat(selectedService?.dataset?.pricePremium || '0').toFixed(2);
+        } else if (serviceLevelSection) {
+            serviceLevelSection.classList.add('hidden');
+        }
+        
+        // Show/hide premium benefits when premium is selected
+        const premiumRadio = document.getElementById('service_level_premium');
+        if (premiumBenefits) {
+            premiumBenefits.classList.toggle('hidden', !premiumRadio?.checked);
+        }
+    }
+
+    function updatePrefilledSummary() {
+        const selectedServiceLevel = document.querySelector('input[name="service_level"]:checked')?.value || 'regular';
+        const prefilledPriceDisplay = document.getElementById('prefilled-price-display');
+        const prefilledPremiumBenefits = document.getElementById('prefilled-premium-benefits');
+        
+        if (prefilledPriceDisplay) {
+            const regularPrice = parseFloat(document.getElementById('service_price')?.value || '0');
+            const premiumPrice = parseFloat(document.getElementById('service_price_premium')?.value || '0');
+            
+            prefilledPriceDisplay.textContent = selectedServiceLevel === 'premium' 
+                ? premiumPrice.toFixed(2) 
+                : regularPrice.toFixed(2);
+        }
+        
+        if (prefilledPremiumBenefits) {
+            prefilledPremiumBenefits.classList.toggle('hidden', selectedServiceLevel !== 'premium');
+        }
+        
+        // Update main price display
+        const priceSummary = document.getElementById('price-summary');
+        if (priceSummary) {
+            const basePrice = selectedServiceLevel === 'premium' 
+                ? parseFloat(document.getElementById('service_price_premium')?.value || '0')
+                : parseFloat(document.getElementById('service_price')?.value || '0');
+            priceSummary.textContent = `₱${basePrice.toFixed(2)}`;
+        }
+    }
+
     // Enable fetch when staff/service changes (dropdown mode)
     if (!isPrefilled) {
         staffSelect?.addEventListener('change', function() {
             if (this.value && dateInput?.value && serviceSelect?.value) fetchTimeSlots();
         });
         serviceSelect?.addEventListener('change', function() {
+            updateServiceLevel(); // Update service level UI first
             if (this.value && dateInput?.value && staffSelect?.value) fetchTimeSlots();
         });
     }
@@ -538,13 +720,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } else {
             const selectedService = serviceSelect?.options[serviceSelect.selectedIndex];
-            basePrice = parseFloat(selectedService?.dataset?.pricePremium || selectedService?.dataset?.price || '0');
+            const selectedServiceLevel = document.querySelector('input[name="service_level"]:checked')?.value || 'regular';
+            
+            // Use appropriate price based on service level
+            if (selectedService?.value) {
+                if (selectedServiceLevel === 'premium') {
+                    basePrice = parseFloat(selectedService?.dataset?.pricePremium || selectedService?.dataset?.price || '0');
+                } else {
+                    basePrice = parseFloat(selectedService?.dataset?.price || '0');
+                }
+            }
+            
             baseDuration = parseInt(selectedService?.dataset?.duration) || 0;
             
             // Update duration display
             const durationDisplay = document.getElementById('duration-display');
             if (durationDisplay && selectedService?.dataset?.duration) {
                 durationDisplay.textContent = `${selectedService.dataset.duration} min`;
+            }
+            
+            // Show/hide premium benefits
+            const premiumBenefits = document.getElementById('premium-benefits');
+            if (premiumBenefits) {
+                premiumBenefits.classList.toggle('hidden', selectedServiceLevel !== 'premium');
             }
         }
         
@@ -680,6 +878,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Make removeAddon globally available
     window.removeAddon = removeAddon;
+
+    // Add event listeners for service level changes
+    document.querySelectorAll('input[name="service_level"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            updateSummary();
+            
+            // Show/hide premium benefits
+            const premiumBenefits = document.getElementById('premium-benefits');
+            if (premiumBenefits) {
+                premiumBenefits.classList.toggle('hidden', this.value !== 'premium');
+            }
+        });
+    });
+
+    // Add event listeners for prefilled service level changes
+    document.querySelectorAll('input[name="service_level"]').forEach(radio => {
+        radio.addEventListener('change', updatePrefilledSummary);
+    });
+
+    // Initialize prefilled summary if applicable
+    if (isPrefilled) {
+        updatePrefilledSummary();
+    }
 
     // Initial update
     updateSummary();

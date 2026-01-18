@@ -162,13 +162,27 @@
                                     <div class="font-medium text-gray-900">{{ $appointment->customer->full_name ?? 'Deleted Customer' }}</div>
                                     <div class="text-sm text-gray-500">{{ $appointment->customer->phone ?? 'N/A' }}</div>
                                 </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 hidden lg:table-cell">{{ $appointment->service->name ?? 'Deleted Service' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 hidden lg:table-cell">
+                                    <div class="flex items-center">
+                                        <span>{{ $appointment->service->name ?? 'Deleted Service' }}</span>
+                                        @if($appointment->service_level === 'premium')
+                                            <span class="ml-2 inline-flex items-center px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold rounded-full">
+                                                <i class="fas fa-crown mr-1"></i>Premium
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
                                 <td class="px-4 py-3 text-sm text-gray-900 hidden lg:table-cell">
                                     {{ $appointment->staff->user->full_name ?? 'Unassigned' }}</td>
-                                <td class="px-4 py-3 text-sm font-semibold text-gray-900 hidden sm:table-cell">
-                                    ₱{{ number_format($appointment->total_amount, 2) }}
+                                <td class="px-4 py-3 text-sm font-semibold {{ $appointment->service_level === 'premium' ? 'text-[var(--gold)]' : 'text-gray-900' }} hidden sm:table-cell">
+                                    <div class="flex items-center">
+                                        <span>₱{{ number_format($appointment->total_amount, 2) }}</span>
+                                        @if($appointment->service_level === 'premium')
+                                            <i class="fas fa-crown ml-2 text-[var(--gold)]"></i>
+                                        @endif
+                                    </div>
                                     @if($appointment->addons && $appointment->addons->count() > 0)
-                                        <div class="text-xs text-purple-600 font-normal">
+                                        <div class="text-xs {{ $appointment->service_level === 'premium' ? 'text-orange-600' : 'text-purple-600' }} font-normal">
                                             +{{ $appointment->addons->count() }} addon{{ $appointment->addons->count() > 1 ? 's' : '' }}
                                         </div>
                                     @endif

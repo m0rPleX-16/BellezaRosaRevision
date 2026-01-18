@@ -580,7 +580,13 @@ class AppointmentController extends Controller
             }
         }
         
-        $totalAmount = $service->price_premium ?? $service->price_regular + $addonTotal;
+        // Calculate base price based on service level
+        $serviceLevel = $request->service_level ?? 'regular';
+        $basePrice = $serviceLevel === 'premium' 
+            ? ($service->price_premium ?? $service->price_regular)
+            : $service->price_regular;
+        
+        $totalAmount = $basePrice + $addonTotal;
         $totalDuration = $baseDuration + $addonDurationTotal;
         $endDateTime = Carbon::parse($request->start_datetime)->addMinutes($totalDuration);
 
@@ -599,6 +605,7 @@ class AppointmentController extends Controller
             $appointment = Appointment::create([
                 'customer_id' => $request->customer_id,
                 'service_id' => $request->service_id,
+                'service_level' => $serviceLevel,
                 'staff_id' => $request->staff_id,
                 'start_datetime' => $request->start_datetime,
                 'end_datetime' => $endDateTime,

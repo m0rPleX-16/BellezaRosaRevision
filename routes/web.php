@@ -137,7 +137,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Routes accessible by both admin and staff
-    Route::middleware(['role:admin,staff'])->prefix('dashboard')->name('dashboard.')->group(function () {
+    Route::middleware(['role:admin'])->prefix('dashboard')->name('dashboard.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('index');
 
         // Appointments
@@ -191,7 +191,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/', [SettingsController::class, 'update'])->name('update');
         });
 
-        // Inventory
+        Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::get('/inventory/daily-update', [InventoryController::class, 'dailyUpdate'])->name('inventory.daily-update');
         Route::post('/inventory/daily-update-save', [InventoryController::class, 'saveDailyUpdates'])->name('inventory.daily-update.save');

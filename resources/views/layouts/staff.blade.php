@@ -138,40 +138,24 @@
         </div>
 
         <nav class="mt-4">
-            <a class="nav-item {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard.index') }}"
-                aria-current="{{ request()->is('dashboard') ? 'page' : 'false' }}">
-                <i class="fas fa-home mr-3"></i> Dashboard
-            </a>
-
             @if (auth()->user()->isStaff())
-                <a class="nav-item {{ request()->is('staff/commission*') ? 'active' : '' }}"
-                    href="{{ route('staff.commission') }}"
+                <a class="nav-item {{ request()->is('staff/dashboard*') ? 'active' : '' }}" href="{{ route('staff.dashboard') }}"
+                    aria-current="{{ request()->is('staff/dashboard*') ? 'page' : 'false' }}">
+                    <i class="fas fa-home mr-3"></i> Dashboard
+                </a>
+                <a class="nav-item {{ request()->is('staff/commission*') ? 'active' : '' }}" href="{{ route('staff.commission') }}"
                     aria-current="{{ request()->is('staff/commission*') ? 'page' : 'false' }}">
                     <i class="fas fa-hand-holding-usd mr-3"></i> My Commissions
                 </a>
-                <a class="nav-item {{ request()->is('staff/schedule*') ? 'active' : '' }}"
-                    href="{{ route('staff.schedule') }}"
+                <a class="nav-item {{ request()->is('staff/schedule*') ? 'active' : '' }}" href="{{ route('staff.schedule') }}"
                     aria-current="{{ request()->is('staff/schedule*') ? 'page' : 'false' }}">
                     <i class="fas fa-calendar-week mr-3"></i> Weekly Schedule
                 </a>
+                <a class="nav-item {{ request()->is('profile*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"
+                    aria-current="{{ request()->is('profile*') ? 'page' : 'false' }}">
+                    <i class="fas fa-user-circle mr-3"></i> Profile
+                </a>
             @endif
-
-            <a class="nav-item {{ request()->is('dashboard/services*') ? 'active' : '' }}"
-                href="{{ route('dashboard.services.index') }}"
-                aria-current="{{ request()->is('dashboard/services*') ? 'page' : 'false' }}">
-                <i class="fas fa-spa mr-3"></i> Services
-            </a>
-            <a class="nav-item {{ request()->is('dashboard/inventory*') ? 'active' : '' }}"
-                href="{{ route('dashboard.inventory.index') }}"
-                aria-current="{{ request()->is('dashboard/inventory*') ? 'page' : 'false' }}">
-                <i class="fas fa-boxes mr-3"></i> Inventory
-            </a>
-
-            <a class="nav-item {{ request()->is('profile*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"
-                aria-current="{{ request()->is('profile*') ? 'page' : 'false' }}">
-                <i class="fas fa-user-circle mr-3"></i> Profile
-            </a>
-
             <div class="px-6 mt-6">
                 <div class="h-px bg-white/20"></div>
             </div>

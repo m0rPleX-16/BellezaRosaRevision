@@ -86,7 +86,14 @@
                         <div class="space-y-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-500">Service</label>
-                                <p class="mt-1 text-base text-gray-900">{{ $appointment->service->name ?? 'N/A' }}</p>
+                                <div class="mt-1 flex items-center">
+                                    <p class="text-base text-gray-900">{{ $appointment->service->name ?? 'N/A' }}</p>
+                                    @if($appointment->service_level === 'premium')
+                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold rounded-full">
+                                            <i class="fas fa-crown mr-1"></i>Premium
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500">Staff</label>
@@ -108,7 +115,14 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-500">Price</label>
-                                <p class="mt-1 text-lg font-semibold text-gray-900">₱{{ number_format($appointment->total_amount, 2) }}</p>
+                                <div class="mt-1 flex items-center justify-between">
+                                    <p class="text-lg font-semibold {{ $appointment->service_level === 'premium' ? 'text-[var(--gold)]' : 'text-gray-900' }}">
+                                        ₱{{ number_format($appointment->total_amount, 2) }}
+                                    </p>
+                                    @if($appointment->service_level === 'premium')
+                                        <i class="fas fa-crown text-[var(--gold)]"></i>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -298,17 +298,40 @@
                         </h4>
                         <div class="space-y-2">
                             <!-- Base Service -->
-                            <div class="flex justify-between items-center py-1 border-b border-gray-100">
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
                                 <div class="flex items-center">
                                     <div class="w-6 h-6 bg-blue-100 rounded flex items-center justify-center mr-2">
                                         <i class="fas fa-cut text-blue-600 text-xs"></i>
                                     </div>
                                     <div>
-                                        <div class="text-sm font-medium text-gray-900">Base Service</div>
+                                        <div class="flex items-center">
+                                            <div class="text-sm font-medium text-gray-900">Base Service</div>
+                                            @if($appointment->service_level === 'premium')
+                                                <span class="ml-2 px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold rounded-full">
+                                                    <i class="fas fa-crown mr-1"></i>Premium
+                                                </span>
+                                            @else
+                                                <span class="ml-2 px-2 py-1 bg-gray-200 text-gray-700 text-xs font-medium rounded-full">
+                                                    <i class="fas fa-check mr-1"></i>Regular
+                                                </span>
+                                            @endif
+                                        </div>
                                         <div class="text-xs text-gray-500">{{ $appointment->service->name }}</div>
+                                        @if($appointment->service_level === 'premium')
+                                            <div class="text-xs text-[var(--gold)] font-medium mt-1">
+                                                <i class="fas fa-gift mr-1"></i>Premium professional products & expert service
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
-                                <div class="text-sm font-bold text-blue-900">{{ $appointment->formatted_base_price }}</div>
+                                <div class="text-right">
+                                    <div class="text-sm font-bold text-blue-900">{{ $appointment->formatted_base_price }}</div>
+                                    @if($appointment->service_level === 'premium')
+                                        <div class="text-xs text-[var(--gold)] font-medium mt-1">
+                                            <i class="fas fa-crown mr-1"></i>{{ $appointment->service_level_display }}
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
                             
                             <!-- Addons -->
@@ -328,17 +351,24 @@
                             @endif
                             
                             <!-- Total -->
-                            <div class="flex justify-between items-center py-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded px-3">
+                            <div class="flex justify-between items-center py-2 bg-gradient-to-r {{ $appointment->service_level === 'premium' ? 'from-yellow-50 to-orange-50' : 'from-blue-50 to-purple-50' }} rounded px-3 border {{ $appointment->service_level === 'premium' ? 'border-yellow-300' : 'border-purple-300' }}">
                                 <div class="flex items-center">
-                                    <div class="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-600 rounded flex items-center justify-center mr-2">
-                                        <i class="fas fa-receipt text-white text-xs"></i>
+                                    <div class="w-6 h-6 bg-gradient-to-br {{ $appointment->service_level === 'premium' ? 'from-yellow-500 to-orange-500' : 'from-blue-600 to-purple-600' }} rounded flex items-center justify-center mr-2">
+                                        <i class="fas {{ $appointment->service_level === 'premium' ? 'fa-crown' : 'fa-receipt' }} text-white text-xs"></i>
                                     </div>
                                     <div>
-                                        <div class="text-sm font-bold text-gray-900">Total</div>
+                                        <div class="text-sm font-bold text-gray-900">
+                                            Total 
+                                            @if($appointment->service_level === 'premium')
+                                                <span class="ml-1 text-xs text-[var(--gold)] font-medium">
+                                                    <i class="fas fa-star mr-1"></i>Premium
+                                                </span>
+                                            @endif
+                                        </div>
                                         <div class="text-xs text-gray-600">Base + Addons</div>
                                     </div>
                                 </div>
-                                <div class="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                                <div class="text-lg font-bold {{ $appointment->service_level === 'premium' ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600' }}">
                                     ₱{{ number_format($appointment->total_amount, 2) }}
                                 </div>
                             </div>

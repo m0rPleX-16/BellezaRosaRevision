@@ -11,6 +11,7 @@ class Appointment extends Model
         'customer_id',
         'staff_id',
         'service_id',
+        'service_level',
         'start_datetime',
         'end_datetime',
         'status',
@@ -29,6 +30,7 @@ class Appointment extends Model
         'is_walk_in'     => 'boolean',
         'total_amount'   => 'decimal:2',
         'cancelled_at'   => 'datetime', // New cast
+        'service_level'  => 'string',
     ];
 
     protected $appends = [
@@ -36,6 +38,7 @@ class Appointment extends Model
         'addons_total',
         'formatted_base_price',
         'formatted_addons_total',
+        'service_level_display',
     ];
 
     public function customer()
@@ -127,7 +130,14 @@ class Appointment extends Model
      */
     public function getBasePriceAttribute(): float
     {
-        return $this->service ? ($this->service->price_premium ?? $this->service->price_regular) : 0;
+        if (!$this->service) {
+            return 0;
+        }
+
+        return match($this->service_level) {
+            'premium' => $this->service->price_premium ?? $this->service->price_regular,
+            default => $this->service->price_regular,
+        };
     }
 
     /**
@@ -160,6 +170,17 @@ class Appointment extends Model
     public function getFormattedAddonsTotalAttribute(): string
     {
         return '₱' . number_format($this->addons_total, 2);
+    }
+
+    /**
+     * Get formatted service level display
+     */
+    public function getServiceLevelDisplayAttribute(): string
+    {
+        return match($this->service_level) {
+            'premium' => 'Premium',
+            default => 'Regular',
+        };
     }
 
     /**
