@@ -45,9 +45,9 @@ function getStatusPillClass($status) {
             </div>
             
         <!-- Date Filter -->
-        <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex flex-wrap items-center justify-start lg:justify-end gap-3">
             <div class="relative">
-                <select id="dateFilter" class="px-4 py-2.5 pr-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm appearance-none cursor-pointer hover:border-gray-300 transition-all duration-200 hover:shadow-md">
+                <select id="dateFilter" class="h-11 min-w-[180px] px-4 pr-10 border border-gray-200 rounded-xl bg-white shadow-sm text-sm text-gray-800 appearance-none cursor-pointer hover:border-gray-300 transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="today">Today</option>
                     <option value="this_week">This Week</option>
                     <option value="this_month">This Month</option>
@@ -62,40 +62,40 @@ function getStatusPillClass($status) {
             </div>
             
             <!-- Custom Date Range (hidden by default) -->
-            <div id="customRange" class="hidden flex gap-3 items-center animate-fadeIn">
+            <div id="customRange" class="hidden flex flex-wrap gap-3 items-center transition-all duration-200 opacity-0 scale-95">
                 <div class="relative group">
-                    <input type="month" id="customDate" class="px-4 py-2.5 pr-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-300 transition-all duration-200 appearance-none cursor-pointer group-hover:border-blue-400 group-hover:shadow-md" placeholder="Select month">
+                    <input type="month" id="customDate" class="h-11 min-w-[180px] px-4 pr-10 border border-gray-200 rounded-xl bg-white shadow-sm text-sm text-gray-800 hover:border-gray-300 transition-all duration-200 appearance-none cursor-pointer group-hover:border-blue-400 group-hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Select month">
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <i class="fas fa-calendar text-gray-400 text-sm group-hover:text-blue-500 transition-colors"></i>
                     </div>
                 </div>
-                <button onclick="applyCustomDate()" class="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md flex items-center gap-2 transform hover:scale-105">
+                <button onclick="applyCustomDate()" class="h-11 px-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md inline-flex items-center justify-center gap-2 whitespace-nowrap">
                     <i class="fas fa-check text-sm"></i>
                     Apply
                 </button>
             </div>
             
             <!-- Custom Range Picker (hidden by default) -->
-            <div id="customRangePicker" class="hidden flex gap-3 items-center animate-fadeIn">
+            <div id="customRangePicker" class="hidden flex flex-wrap gap-3 items-center transition-all duration-200 opacity-0 scale-95">
                 <div class="relative group">
-                    <input type="date" id="dateFrom" class="px-4 py-2.5 pr-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-300 transition-all duration-200 appearance-none cursor-pointer group-hover:border-blue-400 group-hover:shadow-md" placeholder="From date">
+                    <input type="date" id="dateFrom" class="h-11 min-w-[170px] px-4 pr-10 border border-gray-200 rounded-xl bg-white shadow-sm text-sm text-gray-800 hover:border-gray-300 transition-all duration-200 appearance-none cursor-pointer group-hover:border-blue-400 group-hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="From date">
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <i class="fas fa-calendar-day text-gray-400 text-sm group-hover:text-blue-500 transition-colors"></i>
                     </div>
                 </div>
                 <div class="relative group">
-                    <input type="date" id="dateTo" class="px-4 py-2.5 pr-10 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-300 transition-all duration-200 appearance-none cursor-pointer group-hover:border-blue-400 group-hover:shadow-md" placeholder="To date">
+                    <input type="date" id="dateTo" class="h-11 min-w-[170px] px-4 pr-10 border border-gray-200 rounded-xl bg-white shadow-sm text-sm text-gray-800 hover:border-gray-300 transition-all duration-200 appearance-none cursor-pointer group-hover:border-blue-400 group-hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="To date">
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <i class="fas fa-calendar-day text-gray-400 text-sm group-hover:text-blue-500 transition-colors"></i>
                     </div>
                 </div>
-                <button onclick="applyCustomDateRange()" class="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md flex items-center gap-2 transform hover:scale-105">
+                <button onclick="applyCustomDateRange()" class="h-11 px-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md inline-flex items-center justify-center gap-2 whitespace-nowrap">
                     <i class="fas fa-check text-sm"></i>
                     Apply Range
                 </button>
             </div>
                 
-                <button id="mainApplyButton" onclick="applyDateFilter()" class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md">
+                <button id="mainApplyButton" onclick="applyDateFilter()" class="h-11 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md inline-flex items-center justify-center whitespace-nowrap">
                     <i class="fas fa-filter mr-2"></i> Apply Filter
                 </button>
             </div>
