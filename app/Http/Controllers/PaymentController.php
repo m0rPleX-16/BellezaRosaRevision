@@ -114,15 +114,23 @@ class PaymentController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $rules = [
             'appointment_id' => 'required|exists:appointments,id',
             'method' => 'required|in:cash,gcash,bank_transfer,online',
             'amount' => 'required|numeric|min:0',
+            'customer_payment' => 'nullable|numeric|min:0',
             'reference_number' => 'nullable|string|max:100',
             'payment_details' => 'nullable|array',
             'notes' => 'nullable|string',
             'status' => 'required|in:pending,paid'
-        ]);
+        ];
+
+        // Require customer_payment for cash payments
+        if ($request->input('method') === 'cash') {
+            $rules['customer_payment'] = 'required|numeric|min:' . $request->amount;
+        }
+
+        $request->validate($rules);
 
         $appointment = Appointment::with(['payment', 'service', 'staff'])->findOrFail($request->appointment_id);
 
@@ -145,10 +153,19 @@ class PaymentController extends Controller
         try {
             DB::beginTransaction();
 
+            // Calculate change for cash payments
+            $customerPayment = $request->customer_payment;
+            $changeAmount = null;
+            if ($request->input('method') === 'cash' && $customerPayment) {
+                $changeAmount = max(0, $customerPayment - $request->amount);
+            }
+
             $paymentData = [
                 'appointment_id' => $appointment->id,
                 'customer_id' => $appointment->customer_id,
                 'amount' => $request->amount,
+                'customer_payment' => $customerPayment,
+                'change_amount' => $changeAmount,
                 'method' => $request->input('method'),
                 'reference_number' => $request->reference_number,
                 'payment_details' => $request->payment_details ?? [],

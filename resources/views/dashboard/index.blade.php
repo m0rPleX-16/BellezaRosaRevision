@@ -189,7 +189,10 @@ function getStatusPillClass($status) {
                     </div>
                     Recent Appointments
                 </h2>
-                <button onclick="window.location.href='{{ route('dashboard.appointments.index') }}'" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
+                <button type="button"
+                        data-url="{{ route('dashboard.appointments.index') }}"
+                        onclick="window.location.href=this.dataset.url"
+                        class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
                     View All <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
@@ -205,6 +208,13 @@ function getStatusPillClass($status) {
                     </thead>
                     <tbody id="appointmentsTableBody">
                         @forelse($appointments ?? [] as $appointment)
+                        @php
+                            $startRaw = data_get($appointment, 'start_datetime');
+                            $start = $startRaw ? \Carbon\Carbon::parse($startRaw) : null;
+                        @endphp
+                        @php
+                            $status = data_get($appointment, 'status', 'unknown');
+                        @endphp
                         <tr class="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200">
                             <td class="py-4 px-4">
                                 <div class="flex items-center gap-3">
@@ -212,8 +222,8 @@ function getStatusPillClass($status) {
                                         <i class="fas fa-user text-gray-600 text-sm"></i>
                                     </div>
                                     <div>
-                                        <div class="font-semibold text-gray-900">{{ $appointment->customer?->full_name ?? 'Unknown Customer' }}</div>
-                                        <div class="text-xs text-gray-500">ID: {{ $appointment->customer_id }}</div>
+                                        <div class="font-semibold text-gray-900">{{ data_get($appointment, 'customer.full_name', 'Unknown Customer') }}</div>
+                                        <div class="text-xs text-gray-500">ID: {{ data_get($appointment, 'customer_id', 'N/A') }}</div>
                                     </div>
                                 </div>
                             </td>
@@ -223,21 +233,21 @@ function getStatusPillClass($status) {
                                         <i class="fas fa-spa text-purple-600 text-xs"></i>
                                     </div>
                                     <div>
-                                        <div class="font-medium text-gray-900">{{ $appointment->service?->name ?? 'Unknown Service' }}</div>
-                                        <div class="text-xs text-gray-500">{{ $appointment->service?->duration ?? 'N/A' }} mins</div>
+                                        <div class="font-medium text-gray-900">{{ data_get($appointment, 'service.name', 'Unknown Service') }}</div>
+                                        <div class="text-xs text-gray-500">{{ data_get($appointment, 'service.duration_minutes', 'N/A') }} mins</div>
                                     </div>
                                 </div>
                             </td>
                             <td class="py-4 px-4">
                                 <div class="text-gray-700">
-                                    <div class="font-medium">{{ \Carbon\Carbon::parse($appointment->start_datetime)->format('M j, Y') }}</div>
-                                    <div class="text-sm text-gray-500">{{ \Carbon\Carbon::parse($appointment->start_datetime)->format('g:i A') }}</div>
+                                    <div class="font-medium">{{ $start?->format('M j, Y') ?? 'N/A' }}</div>
+                                    <div class="text-sm text-gray-500">{{ $start?->format('g:i A') ?? '' }}</div>
                                 </div>
                             </td>
                             <td class="py-4 px-4">
-                                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset {{ getStatusPillClass($appointment->status) }}">
+                                <span class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-inset {{ getStatusPillClass($status) }}">
                                     <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70"></span>
-                                    {{ str_replace('_', ' ', ucfirst($appointment->status)) }}
+                                    {{ str_replace('_', ' ', ucfirst($status)) }}
                                 </span>
                             </td>
                         </tr>
@@ -252,7 +262,10 @@ function getStatusPillClass($status) {
                                         <p class="font-medium text-gray-700">No appointments found</p>
                                         <p class="text-sm text-gray-500">for the selected period</p>
                                     </div>
-                                    <button onclick="window.location.href='{{ route('dashboard.appointments.create') }}'" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                                    <button type="button"
+                                            data-url="{{ route('dashboard.appointments.create') }}"
+                                            onclick="window.location.href=this.dataset.url"
+                                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
                                         <i class="fas fa-plus mr-2"></i>Create First Appointment
                                     </button>
                                 </div>
@@ -268,6 +281,15 @@ function getStatusPillClass($status) {
 
 <!-- Include modals -->
 @include('dashboard.partials.customer-services-modal')
+
+<script id="dashboard-data" type="application/json">
+{!! json_encode([
+    'stats' => $stats ?? [],
+    'appointments' => $appointments ?? [],
+    'customer_services' => $customersWithServices ?? [],
+    'label' => $stats_label ?? "Today's",
+], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!}
+</script>
 
 <script>
 // Global variables
@@ -316,12 +338,14 @@ document.addEventListener('DOMContentLoaded', function() {
     setupDateFilter();
     
     // Store initial data
-    currentFilterData = {
-        stats: @json($stats ?? []),
-        appointments: @json($appointments ?? []),
-        customer_services: @json($customersWithServices ?? []),
-        label: "{{ $stats_label ?? "Today's" }}"
-    };
+    const dataEl = document.getElementById('dashboard-data');
+    if (dataEl?.textContent) {
+        try {
+            currentFilterData = JSON.parse(dataEl.textContent);
+        } catch (e) {
+            console.error('Failed to parse initial dashboard data', e);
+        }
+    }
 });
 
 // Setup date filter behavior

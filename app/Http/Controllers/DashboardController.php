@@ -10,13 +10,17 @@ use App\Models\Customer;
 use App\Models\Staff;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
 {
+    /** @var \App\Models\User $user */
+    $user = Auth::user();
+
     // Check if user has access to dashboard
-    if (!auth()->user()->isAdmin() && !auth()->user()->isStaff()) {
+    if (!$user || (!$user->isAdmin() && !$user->isStaff())) {
         abort(403, 'Unauthorized access to dashboard.');
     }
 

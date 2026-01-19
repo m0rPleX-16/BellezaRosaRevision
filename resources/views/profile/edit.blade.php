@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+@extends(request()->routeIs('staff.*') ? 'layouts.staff' : 'layouts.dashboard')
 
 @section('title', 'Profile - Belleza Rosa')
 

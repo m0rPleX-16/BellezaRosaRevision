@@ -1,5 +1,5 @@
 <!-- [file name]: resources/views/dashboard/inventory/index.blade.php -->
-@extends('layouts.dashboard')
+@extends(auth()->user()->isStaff() ? 'layouts.staff' : 'layouts.dashboard')
 
 @section('title', 'Inventory - Belleza Rosa')
 

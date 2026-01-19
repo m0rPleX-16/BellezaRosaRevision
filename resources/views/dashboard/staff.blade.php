@@ -129,7 +129,7 @@
                                     <td class="px-4 py-3">
                                         <div class="flex space-x-2">
                                             @if ($appointment->status == 'scheduled' || $appointment->status == 'confirmed')
-                                                <form action="{{ route('dashboard.appointments.status', $appointment) }}"
+                                                <form action="{{ route('staff.appointments.status', $appointment) }}"
                                                     method="POST" class="inline">
                                                     @csrf
                                                     <input type="hidden" name="status" value="in_progress">
@@ -141,11 +141,15 @@
                                             @endif
 
                                             @if ($appointment->status == 'in_progress')
-                                                <form action="{{ route('dashboard.appointments.status', $appointment) }}"
-                                                    method="POST" class="inline">
+                                                <form action="{{ route('staff.appointments.status', $appointment) }}"
+                                                    method="POST" class="inline"
+                                                    id="completeForm{{ $appointment->id }}">
                                                     @csrf
                                                     <input type="hidden" name="status" value="completed">
-                                                    <button type="submit" class="text-green-600 hover:text-green-800"
+                                                    <button type="button" 
+                                                        data-appointment-id="{{ $appointment->id }}"
+                                                        onclick="confirmCompleteAppointment(this.dataset.appointmentId)"
+                                                        class="text-green-600 hover:text-green-800"
                                                         title="Mark as Completed">
                                                         <i class="fas fa-check-circle"></i>
                                                     </button>
@@ -355,5 +359,24 @@
 
         // Update every 60 seconds
         setInterval(updateStaffStatistics, 60000);
+
+        // Confirmation dialog for completing appointments
+        function confirmCompleteAppointment(appointmentId) {
+            Swal.fire({
+                title: 'Mark as Completed?',
+                text: 'This will finalize the service and mark the appointment as completed. The customer will be notified.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, mark as completed',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('completeForm' + appointmentId).submit();
+                }
+            });
+        }
     </script>
 @endsection

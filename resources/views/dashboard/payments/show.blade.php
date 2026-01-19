@@ -26,9 +26,19 @@
                             <p class="mt-1 text-lg font-semibold text-gray-900">#{{ $payment->id }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-500">Amount</label>
+                            <label class="block text-sm font-medium text-gray-500">Amount Due</label>
                             <p class="mt-1 text-2xl font-bold text-green-600">₱{{ number_format($payment->amount, 2) }}</p>
                         </div>
+                        @if($payment->method === 'cash' && $payment->customer_payment)
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500">Amount Received</label>
+                                <p class="mt-1 text-xl font-semibold text-blue-600">₱{{ number_format($payment->customer_payment, 2) }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500">Change</label>
+                                <p class="mt-1 text-xl font-bold text-purple-600">₱{{ number_format($payment->change_amount ?? 0, 2) }}</p>
+                            </div>
+                        @endif
                         <div>
                             <label class="block text-sm font-medium text-gray-500">Payment Method</label>
                             <p class="mt-1 text-lg font-semibold text-gray-900 capitalize">{{ $payment->method }}</p>

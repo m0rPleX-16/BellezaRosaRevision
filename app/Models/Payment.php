@@ -10,6 +10,8 @@ class Payment extends Model
         'appointment_id',
         'customer_id',
         'amount',
+        'customer_payment',
+        'change_amount',
         'method',
         'status',
         'reference_number',
@@ -20,6 +22,8 @@ class Payment extends Model
 
     protected $casts = [
         'amount'          => 'decimal:2',
+        'customer_payment' => 'decimal:2',
+        'change_amount'   => 'decimal:2',
         'payment_details' => 'array',
         'paid_at'         => 'datetime'
     ];

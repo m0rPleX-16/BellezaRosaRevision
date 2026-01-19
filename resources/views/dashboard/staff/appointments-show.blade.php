@@ -282,7 +282,7 @@
                 <h3 class="text-sm font-medium text-gray-500 mb-4">Update Status</h3>
                 <div class="flex flex-wrap gap-3">
                     @if(in_array($appointment->status, ['scheduled', 'confirmed']))
-                        <form action="{{ route('dashboard.appointments.status', $appointment) }}" method="POST" class="inline">
+                        <form action="{{ route('staff.appointments.status', $appointment) }}" method="POST" class="inline">
                             @csrf
                             <input type="hidden" name="status" value="in_progress">
                             <button type="submit" 
@@ -294,7 +294,7 @@
                     @endif
 
                     @if($appointment->status === 'in_progress')
-                        <form action="{{ route('dashboard.appointments.status', $appointment) }}" method="POST" class="inline">
+                        <form action="{{ route('staff.appointments.status', $appointment) }}" method="POST" class="inline">
                             @csrf
                             <input type="hidden" name="status" value="completed">
                             <button type="submit" 
@@ -306,7 +306,7 @@
                     @endif
 
                     @if(in_array($appointment->status, ['scheduled', 'confirmed', 'in_progress']))
-                        <form action="{{ route('dashboard.appointments.status', $appointment) }}" method="POST" class="inline">
+                        <form action="{{ route('staff.appointments.status', $appointment) }}" method="POST" class="inline">
                             @csrf
                             <input type="hidden" name="status" value="no_show">
                             <button type="submit" 

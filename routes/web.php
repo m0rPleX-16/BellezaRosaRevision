@@ -113,6 +113,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [StaffController::class, 'dashboard'])->name('dashboard');
         Route::get('/appointments', [StaffController::class, 'appointments'])->name('appointments');
         Route::get('/appointments/{appointment}', [StaffController::class, 'showAppointment'])->name('appointments.show');
+        Route::post('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.status');
         Route::get('/commission', [StaffController::class, 'commissionReport'])->name('commission');
         Route::post('/service-report', [StaffController::class, 'submitServiceReport'])->name('service-report');
         Route::get('/statistics', [StaffController::class, 'getStatistics'])->name('statistics');
@@ -123,6 +124,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/schedule/{schedule}', [StaffScheduleController::class, 'show'])->name('schedule.show');
         Route::put('/schedule/{schedule}', [StaffScheduleController::class, 'update'])->name('schedule.update');
         Route::delete('/schedule/{schedule}', [StaffScheduleController::class, 'destroy'])->name('schedule.destroy');
+        
+        // Staff Profile routes
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     });
 
     // Admin-only routes
@@ -137,7 +143,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Routes accessible by both admin and staff
-    Route::middleware(['role:admin'])->prefix('dashboard')->name('dashboard.')->group(function () {
+    Route::middleware(['role:admin,staff'])->prefix('dashboard')->name('dashboard.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('index');
 
         // Appointments

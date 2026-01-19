@@ -1,5 +1,5 @@
 <!-- [file name]: resources/views/dashboard/inventory/daily-update.blade.php -->
-@extends('layouts.dashboard')
+@extends(auth()->user()->isStaff() ? 'layouts.staff' : 'layouts.dashboard')
 
 @section('title', 'Daily Stock Update - Belleza Rosa')
 
@@ -114,7 +114,9 @@
                                     </td>
 
                                     <td class="px-4 py-3">
-                                        <button type="button" onclick="removeItemFromUpdate({{ $item->id }})"
+                                        <button type="button"
+                                            data-item-id="{{ $item->id }}"
+                                            onclick="removeItemFromUpdate(this.dataset.itemId)"
                                             class="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition"
                                             title="Remove from update list">
                                             <i class="fas fa-times-circle"></i> Remove
@@ -550,7 +552,7 @@
                         // Clear session storage
                         sessionStorage.removeItem('dailyUpdateRemovedItems');
                         setTimeout(() => {
-                            window.location.href = '{{ route('dashboard.inventory.index') }}';
+                            window.location.href = '{{ route("dashboard.inventory.index") }}';
                         }, 1500);
                     } else {
                         alert('Save failed: ' + (data.message || 'Unknown error'));

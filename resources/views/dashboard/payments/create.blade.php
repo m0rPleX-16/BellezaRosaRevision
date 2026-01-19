@@ -14,7 +14,7 @@
         </div>
 
         <div class="card">
-            <form action="{{ route('dashboard.payments.store') }}" method="POST">
+            <form action="{{ route('dashboard.payments.store') }}" method="POST" data-amount-due="{{ $appointment->total_amount }}">
                 @csrf
                 <input type="hidden" name="appointment_id" value="{{ $appointment->id }}">
                 <input type="hidden" name="status" value="paid">
@@ -53,12 +53,32 @@
                         </select>
                     </div>
 
-                    <!-- Amount -->
+                    <!-- Amount Due (Read-only) -->
                     <div class="form-group">
-                        <label class="block text-gray-700 font-semibold mb-2">Amount *</label>
-                        <input type="number" step="0.01" name="amount" value="{{ $appointment->total_amount }}"
-                            required
-                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none">
+                        <label class="block text-gray-700 font-semibold mb-2">Amount Due</label>
+                        <input type="text" value="₱{{ number_format($appointment->total_amount, 2) }}"
+                            readonly
+                            id="amountDue"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-700 font-semibold cursor-not-allowed">
+                        <input type="hidden" name="amount" value="{{ $appointment->total_amount }}" id="amountInput">
+                    </div>
+
+                    <!-- Customer Payment (Only for Cash) -->
+                    <div class="form-group" id="customerPaymentGroup">
+                        <label class="block text-gray-700 font-semibold mb-2">Amount Received from Customer *</label>
+                        <input type="number" step="0.01" name="customer_payment" id="customerPayment"
+                            min="{{ $appointment->total_amount }}"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-600 outline-none"
+                            placeholder="Enter amount received">
+                        <p class="text-xs text-gray-500 mt-1">Required for cash payments</p>
+                    </div>
+
+                    <!-- Change Display -->
+                    <div class="form-group hidden" id="changeDisplay">
+                        <label class="block text-gray-700 font-semibold mb-2">Change</label>
+                        <div class="w-full px-4 py-3 border-2 border-green-300 rounded-xl bg-green-50">
+                            <span class="text-2xl font-bold text-green-700" id="changeAmount">₱0.00</span>
+                        </div>
                     </div>
 
                     <!-- Reference Number (Conditional) -->
@@ -93,18 +113,38 @@
     </div>
 
     <script>
-        document.querySelector('select[name="method"]').addEventListener('change', function() {
-            const referenceField = document.getElementById('referenceField');
-            const referenceLabel = document.getElementById('referenceLabel');
-            const referenceInput = document.querySelector('input[name="reference_number"]');
+        const methodSelect = document.querySelector('select[name="method"]');
+        const referenceField = document.getElementById('referenceField');
+        const referenceLabel = document.getElementById('referenceLabel');
+        const referenceInput = document.querySelector('input[name="reference_number"]');
+        const customerPaymentGroup = document.getElementById('customerPaymentGroup');
+        const customerPaymentInput = document.getElementById('customerPayment');
+        const changeDisplay = document.getElementById('changeDisplay');
+        const changeAmount = document.getElementById('changeAmount');
+        const amountDue = parseFloat(document.querySelector('form[data-amount-due]').getAttribute('data-amount-due'));
 
-            if (this.value === 'gcash') {
+        // Handle payment method change
+        methodSelect.addEventListener('change', function() {
+            const isCash = this.value === 'cash';
+            const isDigital = ['gcash', 'bank_transfer'].includes(this.value);
+
+            // Show/hide customer payment field (only for cash)
+            if (isCash) {
+                customerPaymentGroup.classList.remove('hidden');
+                customerPaymentInput.required = true;
+            } else {
+                customerPaymentGroup.classList.add('hidden');
+                customerPaymentInput.required = false;
+                customerPaymentInput.value = '';
+                changeDisplay.classList.add('hidden');
+            }
+
+            // Show/hide reference number field
+            if (isDigital) {
                 referenceField.classList.remove('hidden');
-                referenceLabel.textContent = 'GCash Reference Number *';
-                referenceInput.required = true;
-            } else if (this.value === 'bank_transfer') {
-                referenceField.classList.remove('hidden');
-                referenceLabel.textContent = 'Bank Reference Number *';
+                referenceLabel.textContent = this.value === 'gcash' 
+                    ? 'GCash Reference Number *' 
+                    : 'Bank Reference Number *';
                 referenceInput.required = true;
             } else {
                 referenceField.classList.add('hidden');
@@ -112,5 +152,29 @@
                 referenceInput.value = '';
             }
         });
+
+        // Calculate change when customer payment is entered
+        customerPaymentInput.addEventListener('input', function() {
+            const customerPayment = parseFloat(this.value) || 0;
+            
+            if (customerPayment >= amountDue) {
+                const change = customerPayment - amountDue;
+                changeAmount.textContent = '₱' + change.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                changeDisplay.classList.remove('hidden');
+                this.setCustomValidity('');
+            } else if (customerPayment > 0) {
+                changeDisplay.classList.add('hidden');
+                this.setCustomValidity('Amount received must be equal to or greater than amount due.');
+            } else {
+                changeDisplay.classList.add('hidden');
+                this.setCustomValidity('');
+            }
+        });
+
+        // Initialize on page load
+        if (methodSelect.value === 'cash') {
+            customerPaymentGroup.classList.remove('hidden');
+            customerPaymentInput.required = true;
+        }
     </script>
 @endsection

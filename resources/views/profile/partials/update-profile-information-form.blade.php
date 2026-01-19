@@ -6,7 +6,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ request()->routeIs('customer.*') ? route('customer.profile.update') : route('profile.update') }}" enctype="multipart/form-data" class="space-y-5">
+    <form method="post" action="{{ request()->routeIs('customer.*') ? route('customer.profile.update') : (request()->routeIs('staff.*') ? route('staff.profile.update') : route('profile.update')) }}" enctype="multipart/form-data" class="space-y-5">
         @csrf
         @method('patch')
 

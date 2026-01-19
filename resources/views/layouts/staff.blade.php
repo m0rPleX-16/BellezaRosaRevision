@@ -124,7 +124,7 @@
     <aside id="sidebar" class="sidebar" aria-label="Sidebar navigation">
         <div class="p-6 border-b border-white border-opacity-20">
             <div class="flex items-center justify-between">
-                <a href="{{ route('dashboard.index') }}" class="flex items-center">
+                <a href="{{ route('staff.dashboard') }}" class="flex items-center">
                     <img src="{{ asset('images/logo.png') }}" alt="Belleza Rosa Logo"
                         style="height: 28px; margin-right: 10px;">
                     <span class="text-xl font-bold">Belleza Rosa</span>
@@ -151,8 +151,12 @@
                     aria-current="{{ request()->is('staff/schedule*') ? 'page' : 'false' }}">
                     <i class="fas fa-calendar-week mr-3"></i> Weekly Schedule
                 </a>
-                <a class="nav-item {{ request()->is('profile*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"
-                    aria-current="{{ request()->is('profile*') ? 'page' : 'false' }}">
+                <a class="nav-item {{ request()->is('dashboard/inventory*') ? 'active' : '' }}" href="{{ route('dashboard.inventory.index') }}"
+                    aria-current="{{ request()->is('dashboard/inventory*') ? 'page' : 'false' }}">
+                    <i class="fas fa-boxes mr-3"></i> Inventory
+                </a>
+                <a class="nav-item {{ request()->is('staff/profile*') ? 'active' : '' }}" href="{{ route('staff.profile.edit') }}"
+                    aria-current="{{ request()->is('staff/profile*') ? 'page' : 'false' }}">
                     <i class="fas fa-user-circle mr-3"></i> Profile
                 </a>
             @endif

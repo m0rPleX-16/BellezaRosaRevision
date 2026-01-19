@@ -94,7 +94,11 @@ class ProfileController extends Controller
         if ($user->isCustomer()) {
             return Redirect::route('customer.profile.edit')->with('status', 'profile-updated');
         }
-        
+
+        if (request()->routeIs('staff.*')) {
+            return Redirect::route('staff.profile.edit')->with('status', 'profile-updated');
+        }
+
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 

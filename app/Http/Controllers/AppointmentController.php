@@ -1076,7 +1076,7 @@ class AppointmentController extends Controller
         }
         
         // Check if appointment can be cancelled (only upcoming appointments)
-        $appointmentDate = \Carbon\Carbon::parse($appointment->start_datetime);
+        $appointmentDate = Carbon::parse($appointment->start_datetime);
         if (!in_array($appointment->status, ['scheduled', 'confirmed']) || !$appointmentDate->isFuture()) {
             abort(403, 'This appointment cannot be cancelled.');
         }
